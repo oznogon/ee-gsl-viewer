@@ -8,7 +8,7 @@ Open `index.html` in this repo (or https://oznogon.github.io/ee-gsl-viewer/) and
 
 You can then view a replay of the scenario, at one second of gameplay per frame of playback.
 
-![Demonstration of a scenario being played back in the game state log viewer](https://i.imgur.com/j07hRlx.png)
+![Demonstration of a scenario being played back in the game state log viewer](https://i.imgur.com/j07hRlx.gif)
 
 - Start and stop automatic playback by clicking the "Play" button.
 - Scrub through the scenario timeline by dragging the slider at the bottom.
