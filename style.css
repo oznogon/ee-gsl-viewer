@@ -24,9 +24,6 @@ body {
   background-color: #000;
   font-family: 'Bebas Neue Regular', 'Impact', 'Arial Narrow', sans-serif;
   user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  -webkit-user-select: none;
 }
 
 canvas {
@@ -44,14 +41,16 @@ canvas {
   background: rgba(0, 0, 0, 0.8);
   border: 2px solid rgba(255, 255, 255, 0.5);
   border-radius: 34px;
+  bottom: 1px;
   box-sizing: border-box;
   color: #fff;
   cursor: pointer;
   display: inline;
   font-family: 'Bebas Neue Regular', 'Impact', 'Arial Narrow', sans-serif;
   font-size: 24px;
+  margin: 0 20px;
   min-height: 40px;
-  padding: 4px 20px;
+  padding: 6px 20px 4px;
   position: relative;
   transition: all 0.2s;
   user-select: none;
