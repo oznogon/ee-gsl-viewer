@@ -9,11 +9,21 @@
 /* eslint-disable max-classes-per-file, no-console, max-statements, no-underscore-dangle, sort-vars */
 /* eslint-disable max-lines, max-lines-per-function, complexity, no-warning-comments, max-params */
 
-// Globals.
+/*
+ * --------------------------------------------------------------------------------------------------------------------
+ * Global values.
+ * --------------------------------------------------------------------------------------------------------------------
+ */
 let log,
   canvas;
 // Each sector is a 20U (20000) square.
 const sectorSize = 20000.0;
+
+/*
+ * --------------------------------------------------------------------------------------------------------------------
+ * Classes.
+ * --------------------------------------------------------------------------------------------------------------------
+ */
 
 // Consume and organize EmptyEpsilon game state log data.
 class LogData {
@@ -175,10 +185,7 @@ class Canvas {
       return;
     }
 
-    /*
-     * Set the current scenario time to the time selector's current value.
-     * (Should start at 0:00)
-     */
+    // Set the current scenario time to the time selector's current value. (Should start at 0:00)
     const time = $("#time_selector").val(),
       // Scale the canvas to fill the browser window.
       width = document.documentElement.clientWidth,
@@ -232,6 +239,7 @@ class Canvas {
         const entry = entries[id],
           positionX = ((entry.position[0] - this._viewX) * this._zoomScale) + (width / 2.0),
           positionY = ((entry.position[1] - this._viewY) * this._zoomScale) + (height / 2.0),
+          {rotation} = entry,
           // Define common alpha values.
           opaque = 1.0,
           halfTransparent = 0.5,
@@ -244,7 +252,7 @@ class Canvas {
           sizeExplosion = 3,
           sizeCollectible = 2,
           sizeBeamHit = 2,
-          sizeMin = 1;
+          sizeMin = 2;
 
         if (entry.type === "Nebula") {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#202080", mostlyTransparent, size5U);
@@ -283,13 +291,13 @@ class Canvas {
           // Draw probe location.
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#60C080", opaque, sizeMin);
         } else if (entry.type === "Nuke") {
-          Canvas.drawSquare(ctx, positionX, positionY, this._zoomScale, "#F40", opaque, sizeMin);
+          Canvas.drawShapeWithRotation("triangle", ctx, positionX, positionY, rotation, this._zoomScale, "#F40", opaque, sizeMin);
         } else if (entry.type === "EMPMissile") {
-          Canvas.drawSquare(ctx, positionX, positionY, this._zoomScale, "#0FF", opaque, sizeMin);
+          Canvas.drawShapeWithRotation("triangle", ctx, positionX, positionY, rotation, this._zoomScale, "#0FF", opaque, sizeMin);
         } else if (entry.type === "HomingMissile") {
-          Canvas.drawSquare(ctx, positionX, positionY, this._zoomScale, "#FA0", opaque, sizeMin);
+          Canvas.drawShapeWithRotation("triangle", ctx, positionX, positionY, rotation, this._zoomScale, "#FA0", opaque, sizeMin);
         } else if (entry.type === "HVLI") {
-          Canvas.drawSquare(ctx, positionX, positionY, this._zoomScale, "#AAA", opaque, sizeMin);
+          Canvas.drawShapeWithRotation("triangle", ctx, positionX, positionY, rotation, this._zoomScale, "#AAA", opaque, sizeMin);
         } else if (entry.type === "BeamEffect") {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#A60", halfTransparent, sizeBeamHit);
         } else if (entry.type === "ExplosionEffect") {
@@ -400,7 +408,7 @@ class Canvas {
         eachGridlineHoriz += 1) {
         for (let eachGridlineVert = 0; eachGridlineVert < gridlineVertCanvasList.length;
           eachGridlineVert += 1) {
-          ctx.fillText(Canvas.getSectorDesignation(gridlineVertWorldList[eachGridlineVert], gridlineHorizWorldList[eachGridlineHoriz]), gridlineVertCanvasList[eachGridlineVert] + 8, gridlineHorizCanvasList[eachGridlineHoriz] + 24);
+          ctx.fillText(Canvas.getSectorDesignation(gridlineVertWorldList[eachGridlineVert], gridlineHorizWorldList[eachGridlineHoriz]), gridlineVertCanvasList[eachGridlineVert] + 16, gridlineHorizCanvasList[eachGridlineHoriz] + 32);
         }
       }
     }
@@ -418,6 +426,8 @@ class Canvas {
       return `#${highColor}0${lowColor}`;
     } else if (faction === "Ghosts") {
       return `#${highColor}${highColor}${highColor}`;
+    } else if (faction === "Kraylor") {
+      return `#${highColor}00`;
     } else if (faction === "Ktlitans") {
       // Very close to Human Navy
       return `#${lowColor}${highColor}0`;
@@ -433,7 +443,7 @@ class Canvas {
     const hugeSizeModifier = 50;
 
     if (sizeModifier < hugeSizeModifier) {
-      return Math.max(sizeMultiplier * zoomScale, sizeModifier);
+      return Math.max(sizeMultiplier * zoomScale, Math.max(2, sizeModifier));
     }
 
     return sizeMultiplier * zoomScale;
@@ -441,12 +451,8 @@ class Canvas {
 
   // Draw a square that scales with the zoom level.
   static drawSquare (ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier) {
-    // Prevent small objects from disappearing when zoomed out.
-    const sizeMultiplier = sizeModifier * (100 / 3);
-    let squareSize = 1;
-
-    // Set an effective minimum size for the square, unless its size mod is huge.
-    squareSize = Canvas.calculateMinimumSize(sizeMultiplier, zoomScale, sizeModifier);
+    // Set an effective minimum size for the shape.
+    const squareSize = Canvas.calculateMinimumSize(sizeModifier * 33.3, zoomScale, sizeModifier);
 
     // Define the shape's appearance.
     ctx.globalAlpha = fillAlpha;
@@ -457,14 +463,47 @@ class Canvas {
     ctx.globalAlpha = 1.0;
   }
 
+  // Draw a triangle that scales with the zoom level.
+  static drawTriangle (ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier) {
+    // Set an effective minimum size for the shape.
+    const triangleSize = Canvas.calculateMinimumSize(sizeModifier * 33.3, zoomScale, sizeModifier);
+
+    // Define the shape's appearance.
+    ctx.globalAlpha = fillAlpha;
+    ctx.fillStyle = fillColor;
+    // Draw the shape.
+    ctx.beginPath();
+    ctx.moveTo(positionX - triangleSize, positionY + triangleSize);
+    ctx.lineTo(positionX + triangleSize, positionY);
+    ctx.lineTo(positionX - triangleSize, positionY - triangleSize);
+    ctx.fill();
+    // Reset global alpha.
+    ctx.globalAlpha = 1.0;
+  }
+
+  // Draw a delta (notched triangular icon) that scales with the zoom level.
+  static drawDelta (ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier) {
+    // Set an effective minimum size for the shape.
+    const deltaSize = Canvas.calculateMinimumSize(sizeModifier * 33.3, zoomScale, sizeModifier);
+
+    // Define the shape's appearance.
+    ctx.globalAlpha = fillAlpha;
+    ctx.fillStyle = fillColor;
+    // Draw the shape.
+    ctx.beginPath();
+    ctx.moveTo(positionX, positionY);
+    ctx.lineTo(positionX - deltaSize, positionY + deltaSize);
+    ctx.lineTo(positionX + deltaSize, positionY);
+    ctx.lineTo(positionX - deltaSize, positionY - deltaSize);
+    ctx.fill();
+    // Reset global alpha.
+    ctx.globalAlpha = 1.0;
+  }
+
   // Draw a circle that scales with the zoom level.
   static drawCircle (ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier) {
-    // Prevent small objects from disappearing when zoomed out.
-    const sizeMultiplier = sizeModifier * (100 / 3);
-    let circleSize = 1;
-
-    // Set an effective minimum size for the square, unless its size mod is huge.
-    circleSize = Canvas.calculateMinimumSize(sizeMultiplier, zoomScale, sizeModifier / 2);
+    // Set an effective minimum size for the shape.
+    const circleSize = Canvas.calculateMinimumSize(sizeModifier * 33.3, zoomScale, sizeModifier / 2);
 
     // Define the shape's appearance.
     ctx.globalAlpha = fillAlpha;
@@ -525,7 +564,7 @@ class Canvas {
     }
 
     // Draw the ship rectangle and scale it on zoom.
-    Canvas.drawSquare(ctx, positionX, positionY, this._zoomScale, factionColor, 1.0, 4);
+    Canvas.drawShapeWithRotation("delta", ctx, positionX, positionY, entry.rotation, this._zoomScale, factionColor, 1.0, 4);
 
     // Draw its callsign. Draw player callsigns brighter.
     if (this.showCallsigns === true) {
@@ -560,7 +599,45 @@ class Canvas {
       }
     }
   }
+
+  // Rotate a given shape before drawing it.
+  static drawShapeWithRotation (shape, ctx, positionX, positionY, rotation, zoomScale, fillColor, fillAlpha, sizeModifier) {
+    // Convert degrees to radians.
+    const radians = rotation * Math.PI / 180,
+      size = Canvas.calculateMinimumSize(sizeModifier * 33.3, zoomScale, sizeModifier);
+
+    // Save the context state.
+    ctx.save();
+
+    // Move the center of the image to the origin.
+    ctx.translate(positionX + (size / 2), positionY + (size / 2));
+
+    // Rotate the canvas around the origin.
+    ctx.rotate(radians);
+
+    // Draw the given shape, or log that this method doesn't support it.
+    if (shape === "square") {
+      Canvas.drawSquare(ctx, 0, 0, zoomScale, fillColor, fillAlpha, sizeModifier);
+    } else if (shape === "circle") {
+      Canvas.drawCircle(ctx, 0, 0, zoomScale, fillColor, fillAlpha, sizeModifier);
+    } else if (shape === "delta") {
+      Canvas.drawDelta(ctx, 0, 0, zoomScale, fillColor, fillAlpha, sizeModifier);
+    } else if (shape === "triangle") {
+      Canvas.drawTriangle(ctx, 0, 0, zoomScale, fillColor, fillAlpha, sizeModifier);
+    } else {
+      console.log(`Shape ${shape} not supported`);
+    }
+
+    // Restore the saved context state.
+    ctx.restore();
+  }
 }
+
+/*
+ * --------------------------------------------------------------------------------------------------------------------
+ * Classes.
+ * --------------------------------------------------------------------------------------------------------------------
+ */
 
 // Load log data into the dropzone div and setup the time selector.
 function loadLog (data) {
