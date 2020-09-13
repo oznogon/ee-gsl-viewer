@@ -473,9 +473,9 @@ class Canvas {
     ctx.fillStyle = fillColor;
     // Draw the shape.
     ctx.beginPath();
-    ctx.moveTo(positionX - triangleSize, positionY + triangleSize);
-    ctx.lineTo(positionX + triangleSize, positionY);
-    ctx.lineTo(positionX - triangleSize, positionY - triangleSize);
+    ctx.moveTo(positionX - (triangleSize / 2), positionY + triangleSize);
+    ctx.lineTo(positionX + (triangleSize / 2), positionY);
+    ctx.lineTo(positionX - (triangleSize / 2), positionY - triangleSize);
     ctx.fill();
     // Reset global alpha.
     ctx.globalAlpha = 1.0;
@@ -491,10 +491,10 @@ class Canvas {
     ctx.fillStyle = fillColor;
     // Draw the shape.
     ctx.beginPath();
-    ctx.moveTo(positionX, positionY);
-    ctx.lineTo(positionX - deltaSize, positionY + deltaSize);
+    ctx.moveTo(positionX - (deltaSize / 2), positionY);
+    ctx.lineTo(positionX - deltaSize, positionY + (deltaSize / 1.5));
     ctx.lineTo(positionX + deltaSize, positionY);
-    ctx.lineTo(positionX - deltaSize, positionY - deltaSize);
+    ctx.lineTo(positionX - deltaSize, positionY - (deltaSize / 1.5));
     ctx.fill();
     // Reset global alpha.
     ctx.globalAlpha = 1.0;
@@ -603,14 +603,13 @@ class Canvas {
   // Rotate a given shape before drawing it.
   static drawShapeWithRotation (shape, ctx, positionX, positionY, rotation, zoomScale, fillColor, fillAlpha, sizeModifier) {
     // Convert degrees to radians.
-    const radians = rotation * Math.PI / 180,
-      size = Canvas.calculateMinimumSize(sizeModifier * 33.3, zoomScale, sizeModifier);
+    const radians = rotation * Math.PI / 180;
 
-    // Save the context state.
+    // Save the canvas context state.
     ctx.save();
 
     // Move the center of the image to the origin.
-    ctx.translate(positionX + (size / 2), positionY + (size / 2));
+    ctx.translate(positionX, positionY);
 
     // Rotate the canvas around the origin.
     ctx.rotate(radians);
