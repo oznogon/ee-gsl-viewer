@@ -104,7 +104,7 @@ input[type=range] {
 }
 
 input[type=range]:focus {
-  border-color: #fff
+  border-color: #fff;
   outline: none;
 }
 
