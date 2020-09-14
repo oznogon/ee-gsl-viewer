@@ -4,11 +4,13 @@
     <meta charset="utf-8">
     <title>EmptyEpsilon game state log viewer</title>
     <script src="jquery.min.js"></script>
+    <script src="alea.min.js"></script>
     <link href="style.css" rel="stylesheet">
   </head>
 
   <body>
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas-bg"></canvas>
+    <canvas id="canvas-fg"></canvas>
     <div id="controls">
       <button class="ee-button" id="autoplay">Play</button>
       <input id="time_selector" type="range" min="0" max="0" value="0">

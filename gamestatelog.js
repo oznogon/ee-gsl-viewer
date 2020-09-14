@@ -8,6 +8,7 @@
 /* eslint no-extra-parens: ["error", "functions"] */
 /* eslint-disable max-classes-per-file, no-console, max-statements, no-underscore-dangle, sort-vars */
 /* eslint-disable max-lines, max-lines-per-function, complexity, no-warning-comments, max-params */
+/* eslint-disable capitalized-comments */
 
 /*
  * --------------------------------------------------------------------------------------------------------------------
@@ -101,12 +102,18 @@ class LogData {
 // Create and manage the HTML canvas to visualize game state at a point in time.
 class Canvas {
   constructor () {
+    // Accumulated delta from wheel events.
+    this._mousewheelAccumulated = 0.0;
+
     // 100px = 20000U, or 1 sector
     const zoomScalePixels = 100.0,
       zoomScaleUnits = sectorSize;
 
-    // Get canvas by HTML ID.
-    this._canvas = $("#canvas");
+    // Get canvas for background entities by HTML ID.
+    this._backgroundCanvas = $("#canvas-bg");
+
+    // Get main canvas by HTML ID.
+    this._canvas = $("#canvas-fg");
 
     // Handle canvas mouse events.
     this._canvas.mousedown((event) => this._mouseDown(event));
@@ -115,7 +122,7 @@ class Canvas {
     this._canvas.bind("wheel", (event) => {
       event.stopPropagation();
       event.preventDefault();
-      this._mouseWheel(-event.originalEvent.deltaY);
+      this._mouseWheel(event);
     });
 
     // Update canvas on window resize.
@@ -132,7 +139,7 @@ class Canvas {
     this.update();
   }
 
-  // Pass cursor coordinates back to the event on click/drag.
+  // Record cursor coordinates on click and release, for dragging.
   _mouseDown (event) {
     this._lastMouseX = event.clientX;
     this._lastMouseY = event.clientY;
@@ -145,6 +152,7 @@ class Canvas {
 
   // Move view on mouse drag.
   _mouseMove (event) {
+    // Don't do anything unless a button's down.
     if (!event.buttons) {
       return;
     }
@@ -153,7 +161,7 @@ class Canvas {
     this._viewX += (this._lastMouseX - event.clientX) / this._zoomScale;
     this._viewY += (this._lastMouseY - event.clientY) / this._zoomScale;
 
-    // Update mouse position back to event.
+    // Update mouse position from event.
     this._lastMouseX = event.clientX;
     this._lastMouseY = event.clientY;
 
@@ -162,20 +170,35 @@ class Canvas {
   }
 
   // Zoom view when using the mouse wheel.
-  _mouseWheel (delta) {
-    const minimumDelta = -999.99,
+  _mouseWheel (event) {
+    const delta = -event.originalEvent.deltaY,
+      minimumDelta = -100.0,
+      maximumDelta = 100.0,
+      updateThreshold = 100.0,
       zoomScaleDivisor = 1000.0,
       // Cap delta to avoid impossible zoom scales.
-      boundedDelta = Math.max(delta, minimumDelta);
+      boundedDelta = Math.max(minimumDelta, Math.min(maximumDelta, delta));
 
-    // Scale delta input value to zoom scale value.
-    this._zoomScale *= 1.0 + (boundedDelta / zoomScaleDivisor);
+    /*
+     * Mousewheel performance is bad with devices that generate a ton of events.
+     * Update only when we accumulate enough delta.
+     */
+    this._mousewheelAccumulated += Math.abs(boundedDelta);
 
-    // Update zoom selector bar value with the new zoom scale.
-    $("#zoom_selector").val(this._zoomScale * zoomScaleDivisor);
+    // Update the canvas if the accumulated delta's enough.
+    if (this._mousewheelAccumulated > updateThreshold) {
+      // Scale delta input value to zoom scale value.
+      this._zoomScale *= 1.0 + (boundedDelta / zoomScaleDivisor);
 
-    // Update the canvas.
-    this.update();
+      // Update zoom selector bar value with the new zoom scale.
+      $("#zoom_selector").val(this._zoomScale * zoomScaleDivisor);
+
+      // Update the canvas.
+      this.update();
+
+      // Reset the accumulated mousewheel value.
+      this._mousewheelAccumulated = 0.0;
+    }
   }
 
   // Updates the canvas.
@@ -195,6 +218,7 @@ class Canvas {
       minZoom = 0.001,
       // Get the canvas context. We'll use this throughout for drawing.
       ctx = this._canvas[0].getContext("2d"),
+      ctxbg = this._backgroundCanvas[0].getContext("2d"),
       // For each entry at the given time, determine its type and draw an appropriate shape.
       entries = log.getEntriesAtTime(time),
       // Current position and zoom text bar values.
@@ -208,6 +232,8 @@ class Canvas {
 
     this._canvas[0].width = width;
     this._canvas[0].height = height;
+    this._backgroundCanvas[0].width = width;
+    this._backgroundCanvas[0].height = height;
 
     // Workaround for weird intermittent canvas bug.
     if (isNaN(this._viewX)) {
@@ -228,14 +254,15 @@ class Canvas {
     this._zoomScale = Math.min(maxZoom, Math.max(minZoom, this._zoomScale));
 
     // Draw the canvas background.
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0, 0, width, height);
+    ctxbg.fillStyle = "#000";
+    ctxbg.fillRect(0, 0, width, height);
 
     // Draw the background grid.
-    this.drawGrid(ctx, this._viewX, this._viewY, width, height, sectorSize, "#202040");
+    this.drawGrid(ctxbg, this._viewX, this._viewY, width, height, sectorSize, "#202040");
 
     for (const id in entries) {
       if (Object.prototype.hasOwnProperty.call(entries, id)) {
+        // Extract entry position and rotation values.
         const entry = entries[id],
           positionX = ((entry.position[0] - this._viewX) * this._zoomScale) + (width / 2.0),
           positionY = ((entry.position[1] - this._viewY) * this._zoomScale) + (height / 2.0),
@@ -252,14 +279,21 @@ class Canvas {
           sizeExplosion = 3,
           sizeCollectible = 2,
           sizeBeamHit = 2,
-          sizeMin = 2;
+          sizeMin = 2,
+          // Initialize an Image object for rendering sprites.
+          objectImage = new Image();
+        // Initialize RNG variable for nebula images.
+        let nebulaRNG = 0.0;
 
         if (entry.type === "Nebula") {
-          Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#202080", mostlyTransparent, size5U);
+          nebulaRNG = alea(`${entry.id}`);
+          objectImage.src = `images/Nebula${Math.floor((nebulaRNG() * 3) + 1)}.png`;
+          Canvas.drawImage(ctxbg, positionX, positionY, this._zoomScale, halfTransparent, size5U / 2, objectImage, rotation, true);
         } else if (entry.type === "BlackHole") {
-          Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#802020", mostlyTransparent, size5U);
+          objectImage.src = "images/blackHole3d.png";
+          Canvas.drawImage(ctxbg, positionX, positionY, this._zoomScale, opaque, size5U / 2, objectImage, rotation, true);
         } else if (entry.type === "WormHole") {
-          Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#800080", mostlyTransparent, size5U);
+          Canvas.drawCircle(ctxbg, positionX, positionY, this._zoomScale, "#800080", mostlyTransparent, size5U);
         } else if (entry.type === "Mine") {
           // Draw mine radius.
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#808080", mostlyTransparent, size05U);
@@ -279,7 +313,7 @@ class Canvas {
         } else if (entry.type === "Asteroid") {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#FFC864", opaque, sizeMin);
         } else if (entry.type === "VisualAsteroid") {
-          Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#FFC864", mostlyTransparent, sizeMin);
+          Canvas.drawCircle(ctxbg, positionX, positionY, this._zoomScale, "#FFC864", mostlyTransparent, sizeMin);
         } else if (entry.type === "Artifact") {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#FFF", opaque, sizeCollectible);
         } else if (entry.type === "Planet") {
@@ -291,13 +325,13 @@ class Canvas {
           // Draw probe location.
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#60C080", opaque, sizeMin);
         } else if (entry.type === "Nuke") {
-          Canvas.drawShapeWithRotation("triangle", ctx, positionX, positionY, rotation, this._zoomScale, "#F40", opaque, sizeMin);
+          Canvas.drawShapeWithRotation("delta", ctx, positionX, positionY, this._zoomScale, "#F40", opaque, sizeMin, rotation);
         } else if (entry.type === "EMPMissile") {
-          Canvas.drawShapeWithRotation("triangle", ctx, positionX, positionY, rotation, this._zoomScale, "#0FF", opaque, sizeMin);
+          Canvas.drawShapeWithRotation("delta", ctx, positionX, positionY, this._zoomScale, "#0FF", opaque, sizeMin, rotation);
         } else if (entry.type === "HomingMissile") {
-          Canvas.drawShapeWithRotation("triangle", ctx, positionX, positionY, rotation, this._zoomScale, "#FA0", opaque, sizeMin);
+          Canvas.drawShapeWithRotation("delta", ctx, positionX, positionY, this._zoomScale, "#FA0", opaque, sizeMin, rotation);
         } else if (entry.type === "HVLI") {
-          Canvas.drawShapeWithRotation("triangle", ctx, positionX, positionY, rotation, this._zoomScale, "#AAA", opaque, sizeMin);
+          Canvas.drawShapeWithRotation("delta", ctx, positionX, positionY, this._zoomScale, "#AAA", opaque, sizeMin, rotation);
         } else if (entry.type === "BeamEffect") {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#A60", halfTransparent, sizeBeamHit);
         } else if (entry.type === "ExplosionEffect") {
@@ -414,28 +448,65 @@ class Canvas {
     }
   }
 
-  static getFactionColor (faction, lowColor, highColor) {
-    // Rudimentary faction ID; would be nice to use the GM colors from factioninfo.lua. Returns a fillStyle string.
-    if (faction === "Human Navy") {
-      return `#${lowColor}${highColor}${lowColor}`;
-    } else if (faction === "Independent") {
-      return `#${lowColor}${lowColor}${highColor}`;
-    } else if (faction === "Arlenians") {
-      return `#${highColor}${lowColor}0`;
-    } else if (faction === "Exuari") {
-      return `#${highColor}0${lowColor}`;
-    } else if (faction === "Ghosts") {
-      return `#${highColor}${highColor}${highColor}`;
-    } else if (faction === "Kraylor") {
-      return `#${highColor}00`;
-    } else if (faction === "Ktlitans") {
-      // Very close to Human Navy
-      return `#${lowColor}${highColor}0`;
+  /*
+   * Get a color code for the faction, with specified magnitude for the color mix.
+   * Would be nice to use the GM colors directly from factioninfo.lua. Returns a long hex color string (ie. #FF0000).
+   */
+  static getFactionColor (faction, lowColorMagnitude, highColorMagnitude) {
+    let lowColor = `${lowColorMagnitude}`,
+      highColor = `${highColorMagnitude}`;
+
+    // Convert short color codes to long codes by doubling the character.
+    if (lowColorMagnitude.length === 1) {
+      lowColor = `${lowColorMagnitude}${lowColorMagnitude}`;
     }
 
-    // Everybody else is evil
+    if (highColorMagnitude.length === 1) {
+      highColor = `${highColorMagnitude}${highColorMagnitude}`;
+    }
+
+    /*
+     * From factionInfo.lua:
+     *
+     * neutral:setGMColor(128, 128, 128)
+     * human:setGMColor(255, 255, 255)
+     * kraylor:setGMColor(255, 0, 0)
+     * arlenians:setGMColor(255, 128, 0)
+     * exuari:setGMColor(255, 0, 128)
+     * GITM:setGMColor(0, 255, 0)
+     * Hive:setGMColor(128, 255, 0)
+     * TSN:setGMColor(255, 255, 128)
+     * USN:setGMColor(255, 128, 255)
+     * CUF:setGMColor(128, 255, 255)
+     */
+
+    if (faction === "Human Navy") {
+      return `#${highColor}${highColor}${highColor}`;
+    } else if (faction === "Independent") {
+      return `#${lowColor}${lowColor}${lowColor}`;
+    } else if (faction === "Kraylor") {
+      return `#${highColor}0000`;
+    } else if (faction === "Arlenians") {
+      return `#${highColor}${lowColor}00`;
+    } else if (faction === "Exuari") {
+      return `#${highColor}00${lowColor}`;
+    } else if (faction === "Ghosts") {
+      // GITM in factionInfo.lua
+      return `#00${highColor}00`;
+    } else if (faction === "Ktlitans") {
+      // Hive in factionInfo.lua
+      return `#${lowColor}${highColor}00`;
+    } else if (faction === "TSN") {
+      return `#${highColor}${highColor}${lowColor}`;
+    } else if (faction === "USN") {
+      return `#${highColor}${lowColor}${highColor}`;
+    } else if (faction === "CUF") {
+      return `#${lowColor}${highColor}${highColor}`;
+    }
+
+    // Everybody else is fuschia.
     console.debug(`Unknown faction: ${faction}`);
-    return `#${highColor}${lowColor}${lowColor}`;
+    return "#FF00FF";
   }
 
   // Return an effective minimum size for the square, unless its size modifier is huge.
@@ -457,8 +528,10 @@ class Canvas {
     // Define the shape's appearance.
     ctx.globalAlpha = fillAlpha;
     ctx.fillStyle = fillColor;
+
     // Draw the shape.
     ctx.fillRect(positionX - (squareSize / 2), positionY - (squareSize / 2), squareSize, squareSize);
+
     // Reset global alpha.
     ctx.globalAlpha = 1.0;
   }
@@ -471,12 +544,14 @@ class Canvas {
     // Define the shape's appearance.
     ctx.globalAlpha = fillAlpha;
     ctx.fillStyle = fillColor;
+
     // Draw the shape.
     ctx.beginPath();
     ctx.moveTo(positionX - (triangleSize / 2), positionY + triangleSize);
     ctx.lineTo(positionX + (triangleSize / 2), positionY);
     ctx.lineTo(positionX - (triangleSize / 2), positionY - triangleSize);
     ctx.fill();
+
     // Reset global alpha.
     ctx.globalAlpha = 1.0;
   }
@@ -489,6 +564,7 @@ class Canvas {
     // Define the shape's appearance.
     ctx.globalAlpha = fillAlpha;
     ctx.fillStyle = fillColor;
+
     // Draw the shape.
     ctx.beginPath();
     ctx.moveTo(positionX - (deltaSize / 2), positionY);
@@ -496,24 +572,152 @@ class Canvas {
     ctx.lineTo(positionX + deltaSize, positionY);
     ctx.lineTo(positionX - deltaSize, positionY - (deltaSize / 1.5));
     ctx.fill();
+
+    // Reset global alpha.
+    ctx.globalAlpha = 1.0;
+  }
+
+  // Draw a hexagon that scales with the zoom level.
+  static drawHex (ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier) {
+    // Set an effective minimum size for the shape.
+    const hexSize = Canvas.calculateMinimumSize(sizeModifier * 33.3, zoomScale, sizeModifier) / 2;
+
+    // Define the shape's appearance.
+    ctx.globalAlpha = fillAlpha;
+    ctx.fillStyle = fillColor;
+
+    // Draw the shape.
+    ctx.beginPath();
+    ctx.moveTo(positionX + hexSize * Math.cos(0), positionY + hexSize * Math.sin(0));
+    for (let side = 0; side < 7; side += 1) {
+      ctx.lineTo(positionX + hexSize * Math.cos(side * 2 * Math.PI / 6), positionY + hexSize * Math.sin(side * 2 * Math.PI / 6));
+    }
+    ctx.fill();
+
     // Reset global alpha.
     ctx.globalAlpha = 1.0;
   }
 
   // Draw a circle that scales with the zoom level.
-  static drawCircle (ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier) {
+  static drawCircle (ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier, drawStroke = false, strokeColor = "#FF00FF", strokeSize = 5) {
     // Set an effective minimum size for the shape.
     const circleSize = Canvas.calculateMinimumSize(sizeModifier * 33.3, zoomScale, sizeModifier / 2);
 
     // Define the shape's appearance.
     ctx.globalAlpha = fillAlpha;
     ctx.fillStyle = fillColor;
+
     // Draw the shape.
     ctx.beginPath();
     ctx.arc(positionX, positionY, circleSize / 2, 0, 2 * Math.PI, false);
     ctx.fill();
+
+    // Draw a stroke around the shape, if enabled.
+    if (drawStroke) {
+      ctx.lineWidth = Math.min(strokeSize, circleSize / 10);
+      ctx.strokeStyle = strokeColor;
+      ctx.stroke();
+    }
+
     // Reset global alpha.
     ctx.globalAlpha = 1.0;
+  }
+
+  /*
+   * Unused function to convert hex color values to RGB integers.
+   * Revisit if necessary when drawImage can tint images successfully.
+   *
+   * static hexToRgb (hex) {
+   *   const result = {"blue": 0,
+   *       "green": 0,
+   *       "red": 0},
+   *     hexStringLength = hex.length;
+   *   let conversion = {},
+   *     codeIsShort = false;
+   *
+   *   if (hexStringLength < 5) {
+   *     codeIsShort = true;
+   *     conversion = (/^#?(?<red>[a-f\d]{1})(?<green>[a-f\d]{1})(?<blue>[a-f\d]{1})$/iu).exec(hex);
+   *   } else if (hexStringLength > 6) {
+   *     codeIsShort = false;
+   *     conversion = (/^#?(?<red>[a-f\d]{2})(?<green>[a-f\d]{2})(?<blue>[a-f\d]{2})$/iu).exec(hex);
+   *   } else {
+   *     console.error(`Color hex string ${hex} is invalid.`);
+   *   }
+   *
+   *   // Convert hex to int.
+   *   if (codeIsShort) {
+   *     // Double up hex values on short codes.
+   *     result.blue = `${conversion.groups.blue}${conversion.groups.blue}`;
+   *     result.green = `${conversion.groups.green}${conversion.groups.green}`;
+   *     result.red = `${conversion.groups.red}${conversion.groups.red}`;
+   *   } else {
+   *     result.blue = conversion.groups.blue;
+   *     result.green = conversion.groups.green;
+   *     result.red = conversion.groups.red;
+   *   }
+   *
+   *   result.blue = parseInt(result.blue, 16);
+   *   result.green = parseInt(result.green, 16);
+   *   result.red = parseInt(result.red, 16);
+   *
+   *   return result;
+   * }
+   */
+
+  // Draw an image that scales with the zoom level.
+  static drawImage (ctx, positionX, positionY, zoomScale, fillAlpha, sizeModifier, image, rotation = 0.0, useScreen = false) {
+    // Convert degrees to radians.
+    const radians = Canvas.degreesToRadians(rotation),
+      // Set an effective minimum size for the shape.
+      imageSize = Math.max(8, Canvas.calculateMinimumSize(sizeModifier * 100, zoomScale, sizeModifier));
+      // fillColorRGB = Canvas.hexToRgb(fillColor);
+
+    // Save the canvas context state.
+    ctx.save();
+
+    // Move the center of the image to the origin.
+    ctx.translate(positionX - (imageSize / 2), positionY - (imageSize / 2));
+
+    // Rotate the canvas around the origin.
+    ctx.rotate(radians);
+
+    // Define the image's appearance.
+    ctx.globalAlpha = fillAlpha;
+    // ctx.fillStyle = fillColor;
+
+    // Screen the image if we choose to.
+    if (useScreen) {
+      ctx.globalCompositeOperation = "screen";
+    }
+
+    // Draw the image. Must be square; most EE object sprites are anyway.
+    ctx.drawImage(image, 0, 0, imageSize, imageSize);
+
+    /*
+     * TODO: Blend a rect filled with fillColorRGB to tint the image. This is a requirement for using sprites for
+     * faction-specific objects, especially ships and stations.
+     *
+     * The following doesn't work — it wipes the rest of the canvas rendered before this — and it's unclear why.
+     *
+     * ```
+     * ctx.globalCompositeOperation = "source-in";
+     *
+     * // Draw the shape.
+     * ctx.fillRect(0, 0, imageSize, imageSize);
+     * ```
+     *
+     * Doing the rendering in a separate off-screen canvas didn't help.
+     *
+     * The alternatives are to rewrite the color of every pixel, which is ridiculously expensive, or to tint the
+     * source files in a sprite sheet, which is a lot of work required for every game sprite.
+     */
+
+    // Reset global alpha.
+    ctx.globalAlpha = 1.0;
+
+    // Restore the saved context state.
+    ctx.restore();
   }
 
   // Draw the object's callsign.
@@ -530,46 +734,57 @@ class Canvas {
   // Draw a station.
   drawStation (ctx, positionX, positionY, entry) {
     // Get its faction color.
-    const factionColor = Canvas.getFactionColor(entry.faction, "5", "F");
+    const lowColor = "55",
+      highColor = "FF",
+      factionColor = Canvas.getFactionColor(entry.faction, lowColor, highColor);
 
-    // Draw a circle and scale it by zoom and station type.
-    let sizeModifier = 18;
+    // Draw a shape and scale it by zoom and station type.
+    let sizeModifier = 12; //18
 
     if (entry.station_type === "Huge Station") {
-      sizeModifier = 48;
+      sizeModifier = 27; //48
     } else if (entry.station_type === "Large Station") {
-      sizeModifier = 36;
+      sizeModifier = 21; //36
     } else if (entry.station_type === "Medium Station") {
-      sizeModifier = 28;
+      sizeModifier = 17; //28
     }
 
-    Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, factionColor, 1.0, sizeModifier);
+    Canvas.drawHex(ctx, positionX, positionY, this._zoomScale, factionColor, 1.0, sizeModifier);
 
     // Draw the station's callsign, if callsigns are enabled.
     if (this.showCallsigns === true) {
-      Canvas.drawCallsign(ctx, positionX, positionY, this._zoomScale, entry, "18", "C8", "FF", sizeModifier / Math.PI);
+      Canvas.drawCallsign(ctx, positionX, positionY, this._zoomScale, entry, "18", lowColor, highColor, sizeModifier / Math.PI);
     }
   }
 
   // Draw a player or CPU ship.
   drawShip (ctx, positionX, positionY, entry) {
     // Initialize color brightness.
-    let fillStyleMagnitude = "C";
-    // Get the ship's faction color.
-    const factionColor = Canvas.getFactionColor(entry.faction, "0", fillStyleMagnitude);
+    let highColorMagnitude = "CC",
+      lowColorMagnitude = "66",
+      // Set a default faction color.
+      factionColor = "#FF00FF";
 
     // Use a brighter color for player ships.
     if (entry.type === "PlayerSpaceship") {
-      fillStyleMagnitude = "F";
+      highColorMagnitude = "FF";
+      lowColorMagnitude = "80";
     }
 
-    // Draw the ship rectangle and scale it on zoom.
-    Canvas.drawShapeWithRotation("delta", ctx, positionX, positionY, entry.rotation, this._zoomScale, factionColor, 1.0, 4);
+    // Get the ship's faction color.
+    factionColor = Canvas.getFactionColor(entry.faction, lowColorMagnitude, highColorMagnitude);
 
-    // Draw its callsign. Draw player callsigns brighter.
-    if (this.showCallsigns === true) {
-      Canvas.drawCallsign(ctx, positionX, positionY, this._zoomScale, entry, "18", "B8", fillStyleMagnitude, 2);
-    }
+    // Draw shield arcs if the object has them.
+    // For each segment in entry.shields.
+    //  Divide a circle into equal sized arcs.
+    //  Draw each arc at an alpha value relative to its current percentile strength.
+    //  Max is in the entry.config.shields array.
+
+    // Draw hull strength bar.
+    // For entry.hull.
+    //  Draw the width at a value relative to its current percentile strength.
+    //  Max is in entry.config.hull.
+
 
     // Draw beam arcs if the object has them.
     if (typeof entry.config !== "undefined" && typeof entry.config.beams !== "undefined") {
@@ -593,17 +808,31 @@ class Canvas {
         ctx.lineTo(positionX, positionY);
 
         ctx.globalAlpha = 0.5;
-        ctx.strokeStyle = "#F00";
+        ctx.strokeStyle = "#FF0000";
+        ctx.lineWidth = 1;
         ctx.stroke();
         ctx.globalAlpha = 1.0;
       }
     }
+
+    // Draw the shape and scale it on zoom.
+    Canvas.drawShapeWithRotation("delta", ctx, positionX, positionY, this._zoomScale, factionColor, 1.0, 4, entry.rotation);
+
+    // Draw its callsign. Draw player callsigns brighter.
+    if (this.showCallsigns === true) {
+      Canvas.drawCallsign(ctx, positionX, positionY, this._zoomScale, entry, "18", lowColorMagnitude, highColorMagnitude, 2);
+    }
+  }
+
+  // Convert degrees to radians. Used for canvas rotation.
+  static degreesToRadians (degrees) {
+    return degrees * Math.PI / 180;
   }
 
   // Rotate a given shape before drawing it.
-  static drawShapeWithRotation (shape, ctx, positionX, positionY, rotation, zoomScale, fillColor, fillAlpha, sizeModifier) {
+  static drawShapeWithRotation (shape, ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier, rotation = 0.0) {
     // Convert degrees to radians.
-    const radians = rotation * Math.PI / 180;
+    const radians = Canvas.degreesToRadians(rotation);
 
     // Save the canvas context state.
     ctx.save();
@@ -638,15 +867,15 @@ class Canvas {
  * --------------------------------------------------------------------------------------------------------------------
  */
 
-// Load log data into the dropzone div and setup the time selector.
+// Load log data, hide the dropzone div, and setup the time selector.
 function loadLog (data) {
   log = new LogData(data);
 
   if (log.entries.length > 0) {
     $("#dropzone").hide();
     console.debug(log.getMaxTime());
-    canvas.update();
     $("#time_selector").attr("max", log.getMaxTime());
+    canvas.update();
   }
 }
 
@@ -681,7 +910,7 @@ $().ready(function() {
    * TODO: Add file picker option for browser/OS combos that
    * complicate drag-and-drop.
    */
-  document.addEventListener('dragover', function(event) {
+  document.addEventListener("dragover", function(event) {
     event.stopPropagation();
     event.preventDefault();
     event.dataTransfer.dropEffect = "copy";
@@ -697,8 +926,8 @@ $().ready(function() {
     for (var fileIndex = 0, file; file = files[fileIndex]; fileIndex++) {
       var reader = new FileReader();
 
-      reader.onload = function(e2) {
-        loadLog(e2.target.result);
+      reader.onload = function(event2) {
+        loadLog(event2.target.result);
       };
 
       reader.readAsText(file);
@@ -729,12 +958,12 @@ $().ready(function() {
   canvas = new Canvas();
 
   // Update the canvas when the time selector is modified.
-  $("#time_selector").on("input change", function (/*e*/) {
+  $("#time_selector").on("input change", function (/*event*/) {
     canvas.update();
   });
 
   // Zoom bar.
-  $("#zoom_selector").on("input change", function (/*e*/) {
+  $("#zoom_selector").on("input change", function (/*event*/) {
     canvas._zoomScale = $("#zoom_selector").val() / 1000;
     canvas.update();
   });
@@ -742,7 +971,7 @@ $().ready(function() {
   // Track the play/pause button.
   var isAutoplaying = false;
 
-  $("#autoplay").on("click", function (/*e*/) {
+  $("#autoplay").on("click", function (/*event*/) {
     if (log !== null) {
       isAutoplaying = !isAutoplaying;
 
@@ -769,7 +998,7 @@ $().ready(function() {
   }, 100);
 
   // Track whether to show callsigns.
-  $("#callsigns").on("click", function(/*e*/) {
+  $("#callsigns").on("click", function(/*event*/) {
     if (log !== null) {
       canvas.showCallsigns = !canvas.showCallsigns;
       canvas.update();
