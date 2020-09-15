@@ -35,7 +35,7 @@ canvas {
   top: 0;
 }
 
-/* Button styles */
+/* Common styles */
 
 .ee-button {
   background: rgba(0, 0, 0, 0.8);
@@ -83,6 +83,15 @@ canvas {
 
 .ee-button:focus {
   outline: none;
+}
+
+.ee-box {
+  background-color: #808098;
+  border: 2px solid #fff;
+  border-radius: 34px;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: default;
 }
 
 /* Input/slider styles */
@@ -202,13 +211,7 @@ input[type=range]:focus::-ms-fill-upper {
 }
 
 #dropzone {
-  background-color: #808098;
-  border: 2px solid #fff;
-  border-radius: 34px;
   bottom: 0;
-  box-sizing: border-box;
-  color: #fff;
-  cursor: default;
   font-size: 40px;
   height: 160px;
   left: 0;
@@ -221,6 +224,23 @@ input[type=range]:focus::-ms-fill-upper {
   user-select: none;
   vertical-align: middle;
   width: 400px;
+}
+
+#infobox {
+  display: none;
+  font-size: 20px;
+  /* height: 46px; */
+  left: 20px;
+  padding: 10px 20px;
+  position: absolute;
+  text-align: left;
+  top: 60px;
+  width: 320px;
+}
+
+#infobox p {
+  margin: 0;
+  padding: 0;
 }
 
 #droptarget {
