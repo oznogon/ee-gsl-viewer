@@ -114,6 +114,7 @@ class Canvas {
      * https://lavrton.com/hit-region-detection-for-html5-canvas-and-how-to-listen-to-click-events-on-canvas-shapes-815034d7e9f8/
      */
     this._hitCanvas = document.createElement("canvas");
+    $(this._hitCanvas).attr("id", "canvas-hit");
 
     // 100px = 20000U, or 1 sector
     const zoomScalePixels = 100.0,
@@ -180,7 +181,7 @@ class Canvas {
           "x": event.clientX - this._canvas[0].offsetLeft,
           "y": event.clientY - this._canvas[0].offsetTop
         },
-        ctxHit = this._hitCanvas.getContext("2d"),
+        ctxHit = this._hitCanvas.getContext("2d", {"alpha": false}),
         pixel = ctxHit.getImageData(mousePosition.x, mousePosition.y, 1, 1).data,
         // Convert the color to an object ID.
         id = Canvas.rgbToId(pixel[0], pixel[1], pixel[2]),
@@ -211,7 +212,19 @@ class Canvas {
        * console.debug("Entry: ", entry);
        * console.debug("Object by array index: ", entry[id]);
        */
-      console.debug("Object clicked: ", entry[id]);
+      console.debug("Object clicked: ", entry[id], id);
+      console.debug("Pixel value: ", pixel);
+
+      /*
+       * Since we rely on the pixel color, the ID can be undefined thanks to rendering issues, like subpixel
+       * antialiasing. This seems most reproducible by trying to click the sharp points of a delta icon.
+       */
+      if (typeof entry[id] === "undefined") {
+        this._infobox.hide();
+        console.debug("Undefined entry: ", id);
+        return;
+      }
+
       this._infobox.show();
       const arr = jQuery.map(entry[id], function (value, key) {
         if (key !== "config") {
@@ -306,7 +319,7 @@ class Canvas {
       // Get the canvas' contexts. We'll use these throughout for drawing.
       ctx = this._canvas[0].getContext("2d"),
       ctxBg = this._backgroundCanvas[0].getContext("2d"),
-      ctxHit = this._hitCanvas.getContext("2d"),
+      ctxHit = this._hitCanvas.getContext("2d", {"alpha": false}),
       // For each entry at the given time, determine its type and draw an appropriate shape.
       entries = log.getEntriesAtTime(time),
       // Current position and zoom text bar values.
@@ -355,8 +368,9 @@ class Canvas {
       if (Object.prototype.hasOwnProperty.call(entries, id)) {
         // Extract entry position and rotation values.
         const entry = entries[id],
-          positionX = ((entry.position[0] - this._view.x) * this._zoomScale) + (width / 2.0),
-          positionY = ((entry.position[1] - this._view.y) * this._zoomScale) + (height / 2.0),
+          // Lock shapes to whole pixels to avoid subpixel antialiasing as much as possible.
+          positionX = Math.floor(((entry.position[0] - this._view.x) * this._zoomScale) + (width / 2.0)),
+          positionY = Math.floor(((entry.position[1] - this._view.y) * this._zoomScale) + (height / 2.0)),
           {rotation} = entry,
           // Define common alpha values.
           opaque = 1.0,
@@ -396,11 +410,11 @@ class Canvas {
         } else if (entry.type === "PlayerSpaceship") {
           // Draw the ship on the foreground canvas, and its hit shape on the hit canvas.
           this.drawShip(ctx, positionX, positionY, entry);
-          this.drawShip(ctxHit, positionX, positionY, entry, Canvas.idToHex(entry.id));
+          Canvas.drawRectangle(ctxHit, positionX, positionY, this._zoomScale, Canvas.idToHex(entry.id), 1.0, 8.0, 1.33);
         } else if (entry.type === "CpuShip") {
           // Draw the ship on the foreground canvas, and its hit shape on the hit canvas.
           this.drawShip(ctx, positionX, positionY, entry);
-          this.drawShip(ctxHit, positionX, positionY, entry, Canvas.idToHex(entry.id));
+          Canvas.drawRectangle(ctxHit, positionX, positionY, this._zoomScale, Canvas.idToHex(entry.id), 1.0, 8.0, 1.33);
         } else if (entry.type === "WarpJammer") {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#C89664", opaque, sizeJammer);
         } else if (entry.type === "SupplyDrop") {
@@ -408,7 +422,7 @@ class Canvas {
         } else if (entry.type === "SpaceStation") {
           // Draw the station on the foreground canvas, and its hit shape on the hit canvas.
           this.drawStation(ctx, positionX, positionY, entry);
-          this.drawStation(ctxHit, positionX, positionY, entry, Canvas.idToHex(entry.id));
+          Canvas.drawRectangle(ctxHit, positionX, positionY, this._zoomScale, Canvas.idToHex(entry.id), 1.0, 18.0);
         } else if (entry.type === "Asteroid") {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#FFC864", opaque, sizeMin);
         } else if (entry.type === "VisualAsteroid") {
@@ -450,8 +464,13 @@ class Canvas {
     ctx.font = "20px 'Bebas Neue Regular', Impact, Arial, sans-serif";
     ctx.fillText(stateText, 20, 40);
 
-    // Debug hitCanvas by drawing it.
-    // ctx.drawImage(this._hitCanvas, 0, 0);
+    /*
+     * Debug hitCanvas by drawing it.
+     *
+     * ctx.globalAlpha = 0.5;
+     * ctx.drawImage(this._hitCanvas, 0, 0);
+     * ctx.globalAlpha = 1.0;
+     */
   }
 
   /*
@@ -623,7 +642,7 @@ class Canvas {
   }
 
   // Draw a square that scales with the zoom level.
-  static drawSquare (ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier) {
+  static drawRectangle (ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier, ratio = 1.0) {
     // Set an effective minimum size for the shape.
     const squareSize = Canvas.calculateMinimumSize(sizeModifier * 33.3, zoomScale, sizeModifier);
 
@@ -632,10 +651,32 @@ class Canvas {
     ctx.fillStyle = fillColor;
 
     // Draw the shape.
-    ctx.fillRect(positionX - (squareSize / 2), positionY - (squareSize / 2), squareSize, squareSize);
+    ctx.fillRect(positionX - (ratio * (squareSize / 2)), positionY - (1.0 / ratio * (squareSize / 2)), ratio * squareSize, (1.0 / ratio) * squareSize);
 
     // Reset global alpha.
     ctx.globalAlpha = 1.0;
+  }
+
+
+  // Draw a square that scales with the zoom level.
+  static drawSquare (ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier) {
+    // Deprecate for drawRectangle.
+    Canvas.drawRectangle(ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier);
+
+    /*
+     * // Set an effective minimum size for the shape.
+     * const squareSize = Canvas.calculateMinimumSize(sizeModifier * 33.3, zoomScale, sizeModifier);
+     *
+     * // Define the shape's appearance.
+     * ctx.globalAlpha = fillAlpha;
+     * ctx.fillStyle = fillColor;
+     *
+     * // Draw the shape.
+     * ctx.fillRect(positionX - (squareSize / 2), positionY - (squareSize / 2), squareSize, squareSize);
+     *
+     * // Reset global alpha.
+     * ctx.globalAlpha = 1.0;
+     */
   }
 
   // Draw a triangle that scales with the zoom level.
