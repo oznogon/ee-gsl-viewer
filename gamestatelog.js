@@ -186,13 +186,87 @@ class Canvas {
         // Convert the color to an object ID.
         id = Canvas.rgbToId(pixel[0], pixel[1], pixel[2]),
         time = $("#time_selector").val(),
-        entry = log.getEntriesAtTime(time);
+        entry = log.getEntriesAtTime(time),
+        selectedEntry = entry[id];
 
-      // Bail if the ID isn't real, because we probably haven't clicked anything.
-      if (id < 1) {
+      // Clear the infobox and don't bother continuing if the entry isn't valid.
+      if (id < 1 || typeof selectedEntry === "undefined") {
         this._infobox.hide();
+        console.debug("Undefined entry: ", id);
         return;
       }
+
+      // Populate the infobox with data. TODO: Customize mapping by key type.
+      /* eslint-disable */
+      const entryList = {},
+        cssFaction = selectedEntry.faction.split(" ").join("_") || "no_faction",
+        entryMap = new Map([
+          ["callsign", `<span class="ee-faction ee-faction-${cssFaction}">${selectedEntry.callsign || "No callsign"} (${selectedEntry.faction || "No faction"})</span>`],
+          // ["faction", selectedEntry.faction || "No faction"],
+          ["type", ""],
+          ["— Navigation", ""],
+          ["position", `${selectedEntry.position[0].toFixed(2)}, ${selectedEntry.position[1].toFixed(2)}`],
+          ["heading", `${selectedEntry.rotation.toFixed(1)}`],
+          ["— Defense", ""],
+          ["hull", `${Math.floor(selectedEntry.hull)} / ${selectedEntry.config.hull} (${((selectedEntry.hull / selectedEntry.config.hull) * 100.0).toFixed(1)}%)`],
+        ]);
+      let infoboxContents = "";
+
+      // List shields
+      if (selectedEntry.hasOwnProperty("shields")) {
+        const shields = selectedEntry.shields;
+        for (let shield = 0; shield < shields.length; shield += 1) {
+          const currentShield = selectedEntry.shields[shield];
+          const maxShield = selectedEntry.config.shields[shield];
+          entryMap.set(`shield ${shield + 1}`, `${Math.floor(currentShield)} / ${maxShield} (${((currentShield / maxShield) * 100.0).toFixed(1)}%)`);
+        }
+      }
+
+      if (selectedEntry.type === "PlayerSpaceship" || selectedEntry.type === "CpuShip") {
+        if (selectedEntry.hasOwnProperty("missiles")) {
+          entryMap.set("— Offense", "");
+          const currentMissiles = selectedEntry.missiles;
+          const maxMissiles = selectedEntry.config.missiles;
+          for (const missileType in currentMissiles) {
+            const currentMissileCount = currentMissiles[missileType];
+            const maxMissileCount = maxMissiles[missileType];
+            entryMap.set(missileType, `${currentMissileCount} / ${maxMissileCount} (${((currentMissileCount / maxMissileCount) * 100.0).toFixed(1)}%)`);
+          }
+        }
+      }
+
+      // Flag player ships.
+      switch (selectedEntry.type) {
+        case "PlayerSpaceship":
+          entryMap.set("type", `${selectedEntry.ship_type} (Player)`);
+          break;
+        case "CpuShip":
+          entryMap.set("type", `${selectedEntry.ship_type}`);
+          break;
+        case "SpaceStation":
+          entryMap.set("type", `${selectedEntry.station_type}`);
+          break;
+        default:
+      }
+
+
+      /*
+       * Why does this work:
+       *
+       * console.debug((entry[id].faction).split(" ").join("_"));
+       *
+       * and this does not:
+       *
+       * console.debug((entry[id].faction).replace("/ +/_/gu"));
+       */
+
+      /*
+       * Map all entry keys to values and return them as strings.
+       *
+       * infoboxKeyValues = jQuery.map(entry[id], (value, key) => {
+       *   return `${key}: ${value}`;
+       * });
+       */
 
       /*
        * Convert relative mouse position on click to absolute world position.
@@ -210,29 +284,34 @@ class Canvas {
        * console.debug("Object ID:", (pixel[0] * 256 * 256) + (pixel[1] * 256) + (pixel[2]));
        * console.debug("Time: ", time);
        * console.debug("Entry: ", entry);
-       * console.debug("Object by array index: ", entry[id]);
+       * console.debug("Object clicked: ", entry[id], id);
+       * console.debug("Pixel value: ", pixel);
        */
-      console.debug("Object clicked: ", entry[id], id);
-      console.debug("Pixel value: ", pixel);
 
       /*
+       * Bail if the ID isn't real, because we probably haven't clicked anything.
        * Since we rely on the pixel color, the ID can be undefined thanks to rendering issues, like subpixel
        * antialiasing. This seems most reproducible by trying to click the sharp points of a delta icon.
        */
-      if (typeof entry[id] === "undefined") {
-        this._infobox.hide();
-        console.debug("Undefined entry: ", id);
-        return;
-      }
+      console.debug(selectedEntry);
 
+      infoboxContents = "";
+      /*`<ul>
+        <li class="ee-callsign ee-faction ee-faction-${cssFaction}">${entryMap.get("callsign")} &nbsp; ${(entryMap.get("faction"))}</li>
+        <li class="ee-type">${entryMap.get("type")}<li>`;*/
+
+      console.debug(entryMap);
+
+      for (const row of entryMap) {
+        console.debug(row);
+        infoboxContents = infoboxContents.concat(`<li class="ee-${row[0]}">`, row.join(": "), `</li>`);
+      };
+
+      // Show and populate the infobox.
       this._infobox.show();
-      const arr = jQuery.map(entry[id], function (value, key) {
-        if (key !== "config") {
-          return `${key}: ${value}`;
-        }
-      });
-      this._infobox.html(arr.join("<br>"));
-      //this._infobox.html("<p>" + entry[id].type + "<br>" + entry[id].type + "</p>");
+      this._infobox.html(infoboxContents);
+      // this._infobox.html(infoboxKeyValues.join("<br>"));
+      // this._infobox.html("<p>" + entry[id].type + "<br>" + entry[id].type + "</p>");
     } else {
       // Otherwise, we're dragging, so update lastMouse.
       this._lastMouse.x = event.clientX;

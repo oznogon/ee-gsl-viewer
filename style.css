@@ -94,6 +94,71 @@ canvas {
   cursor: default;
 }
 
+/* Infobox text styles */
+
+.ee-callsign {
+  text-shadow:
+    -1px -1px 0 #000000,
+    1px -1px 0 #000000,
+    -1px 1px 0 #000000,
+    1px 1px 0 #000000;
+}
+
+/*
+ * From factionInfo.lua:
+ *
+ * neutral:setGMColor(128, 128, 128)
+ * human:setGMColor(255, 255, 255)
+ * kraylor:setGMColor(255, 0, 0)
+ * arlenians:setGMColor(255, 128, 0)
+ * exuari:setGMColor(255, 0, 128)
+ * GITM:setGMColor(0, 255, 0)
+ * Hive:setGMColor(128, 255, 0)
+ * TSN:setGMColor(255, 255, 128)
+ * USN:setGMColor(255, 128, 255)
+ * CUF:setGMColor(128, 255, 255)
+ */
+
+.ee-faction-Independent {
+  color: rgb(128, 128, 128);
+}
+
+.ee-faction-Human_Navy {
+  color: rgb(255, 255, 255);
+}
+
+.ee-faction-Kraylor {
+  color: rgb(255, 0, 0);
+}
+
+.ee-faction-Arlenians {
+  color: rgb(255, 128, 0);
+}
+
+.ee-faction-Exuari {
+  color: rgb(255, 0, 128);
+}
+
+.ee-faction-Ghosts {
+  color: rgb(0, 255, 0);
+}
+
+.ee-faction-Ktlitans {
+  color: rgb(128, 255, 0);
+}
+
+.ee-faction-TSN {
+  color: rgb(255, 255, 128);
+}
+
+.ee-faction-USN {
+  color: rgb(255, 128, 255);
+}
+
+.ee-faction-CUF {
+  color: rgb(128, 255, 255);
+}
+
 /* Input/slider styles */
 
 input[type=range] {
@@ -238,9 +303,15 @@ input[type=range]:focus::-ms-fill-upper {
   width: 320px;
 }
 
-#infobox p {
+#infobox p,
+#infobox ul,
+#infobox li {
   margin: 0;
   padding: 0;
+}
+
+#infobox li {
+  list-style-type: none;
 }
 
 #droptarget {
