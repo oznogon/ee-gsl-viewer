@@ -265,14 +265,13 @@ input[type=range]:focus::-ms-fill-upper {
 /* ID-specific styles */
 
 #controls {
-  bottom: 20px;
+  bottom: 30px;
   height: 40px;
-  left: 0;
-  margin: auto;
+  margin: 0;
   position: absolute;
   right: 0;
   text-align: center;
-  width: 100%;
+  display: inline-block;
 }
 
 #dropzone {
@@ -325,8 +324,8 @@ input[type=range]:focus::-ms-fill-upper {
 
 #zoom_selector {
   position: absolute;
-  right: -20px;
-  top: 40px;
+  right: -60px;
+  top: 100px;
   transform: rotate(270deg);
-  width: 100px;
+  width: 200px;
 }
