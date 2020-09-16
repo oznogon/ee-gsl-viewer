@@ -102,8 +102,8 @@ class LogData {
 // Create and manage the HTML canvas to visualize game state at a point in time.
 class Canvas {
   constructor () {
-    // Initialize accumulated delta from wheel events.
-    this._mousewheelAccumulated = 0.0;
+    // Initialize tracking for throttling zoom/mousewheel events.
+    this._zoomThrottle = false;
     // Get canvases for background (grid, terrain) and foreground (ships, stations) objects.
     this._backgroundCanvas = $("#canvas-bg");
     this._canvas = $("#canvas-fg");
@@ -125,7 +125,7 @@ class Canvas {
     this._canvas.mousemove((event) => this._mouseMove(event));
     this._canvas.mouseup((event) => this._mouseUp(event));
     this._canvas.bind("wheel", (event) => {
-      event.stopPropagation();
+      // Prevent default scroll behavior in Webkit
       event.preventDefault();
       this._mouseWheel(event);
     });
@@ -340,33 +340,39 @@ class Canvas {
 
   // Zoom view when using the mouse wheel.
   _mouseWheel (event) {
-    const delta = -event.originalEvent.deltaY,
-      minimumDelta = -100.0,
-      maximumDelta = 100.0,
-      updateThreshold = 100.0,
-      zoomScaleDivisor = 1000.0,
-      // Cap delta to avoid impossible zoom scales.
-      boundedDelta = Math.max(minimumDelta, Math.min(maximumDelta, delta));
+    // Throttle mousewheel zoom to no more than once every 50ms.
+    // https://codeburst.io/throttling-and-debouncing-in-javascript-b01cad5c8edf
+    if (!this._zoomThrottle) {
+      this._zoomThrottle = true;
+      setTimeout(() => this._zoomThrottle = false, 50);
 
-    /*
-     * Mousewheel performance is bad with devices that generate a ton of events.
-     * Update only when we accumulate enough delta.
-     */
-    this._mousewheelAccumulated += Math.abs(boundedDelta);
+      const wheelDelta = event.originalEvent.wheelDelta,
+        deltaY = event.originalEvent.deltaY,
+        zoomScaleDivisor = 1000.0;
+      let delta = 0.0;
 
-    // Update the canvas if the accumulated delta's enough.
-    if (this._mousewheelAccumulated > updateThreshold) {
-      // Scale delta input value to zoom scale value.
-      this._zoomScale *= 1.0 + (boundedDelta / zoomScaleDivisor);
+      // Cross-browser/platform delta normalization isn't easy: https://stackoverflow.com/questions/5527601/normalizing-mousewheel-speed-across-browsers
+      if (wheelDelta) {
+        // Chrome Win/Mac | Safari Mac | Opera Win/Mac | Edge
+        delta = wheelDelta / 120.0;
+      }
 
+      if (deltaY) {
+        // Firefox Win/Mac | IE
+        if (deltaY > 0.0) {
+          delta = -1.0;
+        } else {
+          delta = 1.0;
+        }
+      }
+
+      // Modify zoom based on delta.
+      this._zoomScale += this._zoomScale * (delta * 100.0 / zoomScaleDivisor); //(1000.0 * delta) / zoomScaleDivisor;
       // Update zoom selector bar value with the new zoom scale.
       $("#zoom_selector").val(this._zoomScale * zoomScaleDivisor);
 
       // Update the canvas.
       this.update();
-
-      // Reset the accumulated mousewheel value.
-      this._mousewheelAccumulated = 0.0;
     }
   }
 
