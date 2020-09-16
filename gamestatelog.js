@@ -120,7 +120,7 @@ class Canvas {
       new Image()
     ];
     for (let i = 0; i < this.nebulaImages.length; i += 1) {
-      this.nebulaImages[i].src = `images/Nebula${[i + 1]}.png`;
+      this.nebulaImages[i].src = `images/Nebula${i + 1}.png`;
     }
     this.wormHoleImages = [
       new Image(),
@@ -128,7 +128,7 @@ class Canvas {
       new Image()
     ];
     for (let i = 0; i < this.wormHoleImages.length; i += 1) {
-      this.wormHoleImages[i].src = `images/wormHole${[i + 1]}.png`;
+      this.wormHoleImages[i].src = `images/wormHole${i + 1}.png`;
     }
     this.blackHoleImage = new Image();
     this.blackHoleImage.src = "images/blackHole3d.png";
