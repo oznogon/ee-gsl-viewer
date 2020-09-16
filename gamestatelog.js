@@ -107,10 +107,34 @@ class Canvas {
     // Get canvases for background (grid, terrain) and foreground (ships, stations) objects.
     this._backgroundCanvas = $("#canvas-bg");
     this._canvas = $("#canvas-fg");
+    // Get the infobox for displaying selected object data.
     this._infobox = $("#infobox");
+    // Initialize the currently selected object.
+    this._selectedObject = {
+      "type": "No selection"
+    };
+    // Initialize Image objects for rendering sprites.
+    this.nebulaImages = [
+      new Image(),
+      new Image(),
+      new Image()
+    ];
+    for (let i = 0; i < this.nebulaImages.length; i += 1) {
+      this.nebulaImages[i].src = `images/Nebula${[i + 1]}.png`;
+    }
+    this.wormHoleImages = [
+      new Image(),
+      new Image(),
+      new Image()
+    ];
+    for (let i = 0; i < this.wormHoleImages.length; i += 1) {
+      this.wormHoleImages[i].src = `images/wormHole${[i + 1]}.png`;
+    }
+    this.blackHoleImage = new Image();
+    this.blackHoleImage.src = "images/blackHole3d.png";
 
     /*
-     * Create hit canvas for clickable objects. We won't draw this for the user.
+     * Create the hit canvas for clickable objects. We won't draw this for the user.
      * https://lavrton.com/hit-region-detection-for-html5-canvas-and-how-to-listen-to-click-events-on-canvas-shapes-815034d7e9f8/
      */
     this._hitCanvas = document.createElement("canvas");
@@ -185,12 +209,15 @@ class Canvas {
         pixel = ctxHit.getImageData(mousePosition.x, mousePosition.y, 1, 1).data,
         // Convert the color to an object ID.
         id = Canvas.rgbToId(pixel[0], pixel[1], pixel[2]),
+        // Get the current timeline value from the time selector element.
         time = $("#time_selector").val(),
-        entry = log.getEntriesAtTime(time),
-        selectedEntry = entry[id];
+        // Get the log entry for the given time.
+        entry = log.getEntriesAtTime(time);
+        // Get the object from the given entry.
+      this._selectedObject = entry[id];
 
       // Clear the infobox and don't bother continuing if the entry isn't valid.
-      if (id < 1 || typeof selectedEntry === "undefined") {
+      if (id < 1 || typeof this._selectedObject === "undefined") {
         this._infobox.hide();
         console.debug("Undefined entry: ", id);
         return;
@@ -199,34 +226,35 @@ class Canvas {
       // Populate the infobox with data. TODO: Customize mapping by key type.
       /* eslint-disable */
       const entryList = {},
-        cssFaction = selectedEntry.faction.split(" ").join("_") || "no_faction",
+        cssFaction = this._selectedObject.faction.split(" ").join("_") || "no_faction",
         entryMap = new Map([
-          ["callsign", `<span class="ee-faction ee-faction-${cssFaction}">${selectedEntry.callsign || "No callsign"} (${selectedEntry.faction || "No faction"})</span>`],
-          // ["faction", selectedEntry.faction || "No faction"],
+          ["callsign", `<span class="ee-faction ee-faction-${cssFaction}">${this._selectedObject.callsign || "No callsign"} (${this._selectedObject.faction || "No faction"})</span>`],
+          // ["faction", this._selectedObject.faction || "No faction"],
           ["type", ""],
           ["— Navigation", ""],
-          ["position", `${selectedEntry.position[0].toFixed(2)}, ${selectedEntry.position[1].toFixed(2)}`],
-          ["heading", `${selectedEntry.rotation.toFixed(1)}`],
+          ["position", `${this._selectedObject.position[0].toFixed(2)}, ${this._selectedObject.position[1].toFixed(2)}`],
+          ["heading", `${this._selectedObject.rotation.toFixed(1)}`],
           ["— Defense", ""],
-          ["hull", `${Math.floor(selectedEntry.hull)} / ${selectedEntry.config.hull} (${((selectedEntry.hull / selectedEntry.config.hull) * 100.0).toFixed(1)}%)`],
+          ["hull", `${Math.floor(this._selectedObject.hull)} / ${this._selectedObject.config.hull} (${((this._selectedObject.hull / this._selectedObject.config.hull) * 100.0).toFixed(1)}%)`],
         ]);
       let infoboxContents = "";
 
-      // List shields
-      if (selectedEntry.hasOwnProperty("shields")) {
-        const shields = selectedEntry.shields;
+      // List each shield segment.
+      if (this._selectedObject.hasOwnProperty("shields")) {
+        const shields = this._selectedObject.shields;
         for (let shield = 0; shield < shields.length; shield += 1) {
-          const currentShield = selectedEntry.shields[shield];
-          const maxShield = selectedEntry.config.shields[shield];
+          const currentShield = this._selectedObject.shields[shield];
+          const maxShield = this._selectedObject.config.shields[shield];
           entryMap.set(`shield ${shield + 1}`, `${Math.floor(currentShield)} / ${maxShield} (${((currentShield / maxShield) * 100.0).toFixed(1)}%)`);
         }
       }
 
-      if (selectedEntry.type === "PlayerSpaceship" || selectedEntry.type === "CpuShip") {
-        if (selectedEntry.hasOwnProperty("missiles")) {
+      // List ship missile stocks.
+      if (this._selectedObject.type === "PlayerSpaceship" || this._selectedObject.type === "CpuShip") {
+        if (this._selectedObject.hasOwnProperty("missiles")) {
           entryMap.set("— Offense", "");
-          const currentMissiles = selectedEntry.missiles;
-          const maxMissiles = selectedEntry.config.missiles;
+          const currentMissiles = this._selectedObject.missiles;
+          const maxMissiles = this._selectedObject.config.missiles;
           for (const missileType in currentMissiles) {
             const currentMissileCount = currentMissiles[missileType];
             const maxMissileCount = maxMissiles[missileType];
@@ -236,19 +264,18 @@ class Canvas {
       }
 
       // Flag player ships.
-      switch (selectedEntry.type) {
+      switch (this._selectedObject.type) {
         case "PlayerSpaceship":
-          entryMap.set("type", `${selectedEntry.ship_type} (Player)`);
+          entryMap.set("type", `${this._selectedObject.ship_type} (Player)`);
           break;
         case "CpuShip":
-          entryMap.set("type", `${selectedEntry.ship_type}`);
+          entryMap.set("type", `${this._selectedObject.ship_type}`);
           break;
         case "SpaceStation":
-          entryMap.set("type", `${selectedEntry.station_type}`);
+          entryMap.set("type", `${this._selectedObject.station_type}`);
           break;
         default:
       }
-
 
       /*
        * Why does this work:
@@ -278,8 +305,6 @@ class Canvas {
        */
 
       /*
-       * Select the object if one matches from the hit canvas.
-       *
        * console.debug("Hitbox color clicked:", pixel);
        * console.debug("Object ID:", (pixel[0] * 256 * 256) + (pixel[1] * 256) + (pixel[2]));
        * console.debug("Time: ", time);
@@ -288,22 +313,8 @@ class Canvas {
        * console.debug("Pixel value: ", pixel);
        */
 
-      /*
-       * Bail if the ID isn't real, because we probably haven't clicked anything.
-       * Since we rely on the pixel color, the ID can be undefined thanks to rendering issues, like subpixel
-       * antialiasing. This seems most reproducible by trying to click the sharp points of a delta icon.
-       */
-      console.debug(selectedEntry);
-
-      infoboxContents = "";
-      /*`<ul>
-        <li class="ee-callsign ee-faction ee-faction-${cssFaction}">${entryMap.get("callsign")} &nbsp; ${(entryMap.get("faction"))}</li>
-        <li class="ee-type">${entryMap.get("type")}<li>`;*/
-
-      console.debug(entryMap);
-
+      // Populate infobox with object info.
       for (const row of entryMap) {
-        console.debug(row);
         infoboxContents = infoboxContents.concat(`<li class="ee-${row[0]}">`, row.join(": "), `</li>`);
       };
 
@@ -470,22 +481,18 @@ class Canvas {
           sizeCollectible = 2,
           sizeBeamHit = 2,
           sizeMin = 2,
-          // Initialize an Image object for rendering sprites.
-          objectImage = new Image();
-        // Initialize RNG variable for nebula images.
-        let nebulaRNG = 0.0,
-          // Initialize ID color code. Codes with any red value but 00 in the green component won't be calculated.
-          idToHex = "#FF00FF";
+          // Initialize RNG variable for nebula images.
+          imageRNG = alea(`${entry.id}`);
+        // Initialize ID color code. Codes with any red value but 00 in the green component won't be calculated.
+        let idToHex = "#FF00FF";
 
         if (entry.type === "Nebula") {
-          nebulaRNG = alea(`${entry.id}`);
-          objectImage.src = `images/Nebula${Math.floor((nebulaRNG() * 3) + 1)}.png`;
-          Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, halfTransparent, size5U / 2, objectImage, rotation, true);
+          Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, halfTransparent, size5U / 2, this.nebulaImages[Math.floor(imageRNG() * 3)], rotation, true);
         } else if (entry.type === "BlackHole") {
-          objectImage.src = "images/blackHole3d.png";
-          Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, opaque, size5U / 2, objectImage, rotation, true);
+          Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, opaque, size5U / 2, blackHoleImage, rotation, true);
         } else if (entry.type === "WormHole") {
-          Canvas.drawCircle(ctxBg, positionX, positionY, this._zoomScale, "#800080", mostlyTransparent, size5U);
+          Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, opaque, size5U / 2, this.wormHoleImages[Math.floor(imageRNG() * 3)], rotation, true);
+          // Canvas.drawCircle(ctxBg, positionX, positionY, this._zoomScale, "#800080", mostlyTransparent, size5U);
         } else if (entry.type === "Mine") {
           // Draw mine radius.
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#808080", mostlyTransparent, size05U);
@@ -742,26 +749,10 @@ class Canvas {
     ctx.globalAlpha = 1.0;
   }
 
-
   // Draw a square that scales with the zoom level.
   static drawSquare (ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier) {
-    // Deprecate for drawRectangle.
+    // Deprecate for drawRectangle with a 1.0 ratio.
     Canvas.drawRectangle(ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier);
-
-    /*
-     * // Set an effective minimum size for the shape.
-     * const squareSize = Canvas.calculateMinimumSize(sizeModifier * 33.3, zoomScale, sizeModifier);
-     *
-     * // Define the shape's appearance.
-     * ctx.globalAlpha = fillAlpha;
-     * ctx.fillStyle = fillColor;
-     *
-     * // Draw the shape.
-     * ctx.fillRect(positionX - (squareSize / 2), positionY - (squareSize / 2), squareSize, squareSize);
-     *
-     * // Reset global alpha.
-     * ctx.globalAlpha = 1.0;
-     */
   }
 
   // Draw a triangle that scales with the zoom level.
@@ -862,6 +853,7 @@ class Canvas {
         "red": 0
       };
 
+    // Detect whether the hex string is short (#FFF) or long (#FFFFFF).
     if (hexStringLength < 3) {
       console.error(`Color hex string ${hex} is invalid.`);
       return result;
@@ -892,13 +884,12 @@ class Canvas {
       };
     }
 
-    result = {
+    // Convert the result.
+    return result = {
       "blue": parseInt(result.blue, 16),
       "green": parseInt(result.green, 16),
       "red": parseInt(result.red, 16)
     };
-
-    return result;
   }
 
   // Convert an integer color code component to a hex value.
@@ -999,12 +990,20 @@ class Canvas {
       // Set a default faction color.
       factionColor = overrideFillColor;
 
-    if (entry.station_type === "Huge Station") {
+    switch (entry.station_type) {
+    case "Huge Station":
       sizeModifier = 27;
-    } else if (entry.station_type === "Large Station") {
+      break;
+    case "Large Station":
       sizeModifier = 21;
-    } else if (entry.station_type === "Medium Station") {
+      break;
+    case "Medium Station":
       sizeModifier = 17;
+      break;
+    case "Small Station":
+      sizeModifier = 12;
+      break;
+    default:
     }
 
     // Get the station's faction color, unless we're overriding the fill color.
@@ -1046,18 +1045,18 @@ class Canvas {
       factionColor = overrideFillColor;
     }
 
-    // Draw shield arcs if the object has them.
+    // Draw shield arcs if the object has them. #4
     // For each segment in entry.shields.
     //  Divide a circle into equal sized arcs.
     //  Draw each arc at an alpha value relative to its current percentile strength.
     //  Max is in the entry.config.shields array.
 
-    // Draw hull strength bar.
+    // Draw hull strength bar. #4
     // For entry.hull.
     //  Draw the width at a value relative to its current percentile strength.
     //  Max is in entry.config.hull.
 
-    // Draw beam arcs if the object has them and we're nt drawing on the hit canvas.
+    // Draw beam arcs if the object has them and we're not drawing on the hit canvas.
     if (typeof entry.config !== "undefined" && typeof entry.config.beams !== "undefined" && !drawingOnHitCanvas) {
       for (let beamIndex = 0; beamIndex < entry.config.beams.length; beamIndex += 1) {
         const beam = entry.config.beams[beamIndex],
@@ -1083,6 +1082,8 @@ class Canvas {
         ctx.lineWidth = 1;
         ctx.stroke();
         ctx.globalAlpha = 1.0;
+
+        // TODO: Draw turret arcs. #15
       }
     }
 
@@ -1115,16 +1116,21 @@ class Canvas {
     ctx.rotate(radians);
 
     // Draw the given shape, or log that this method doesn't support it.
-    if (shape === "square") {
+    switch (shape) {
+    case "square":
       Canvas.drawSquare(ctx, 0, 0, zoomScale, fillColor, fillAlpha, sizeModifier);
-    } else if (shape === "circle") {
+      break;
+    case "circle":
       Canvas.drawCircle(ctx, 0, 0, zoomScale, fillColor, fillAlpha, sizeModifier);
-    } else if (shape === "delta") {
+      break;
+    case "delta":
       Canvas.drawDelta(ctx, 0, 0, zoomScale, fillColor, fillAlpha, sizeModifier);
-    } else if (shape === "triangle") {
+      break;
+    case "triangle":
       Canvas.drawTriangle(ctx, 0, 0, zoomScale, fillColor, fillAlpha, sizeModifier);
-    } else {
-      console.log(`Shape ${shape} not supported`);
+      break;
+    default:
+      console.error(`Shape ${shape} not supported.`);
     }
 
     // Restore the saved context state.
@@ -1134,7 +1140,7 @@ class Canvas {
 
 /*
  * --------------------------------------------------------------------------------------------------------------------
- * Classes.
+ * Functions.
  * --------------------------------------------------------------------------------------------------------------------
  */
 
@@ -1176,11 +1182,7 @@ function formatTime (time) {
 
 // Main function.
 $().ready(function() {
-  /*
-   * Listen from drag and drop events to load log files.
-   * TODO: Add file picker option for browser/OS combos that
-   * complicate drag-and-drop.
-   */
+  // Listen from drag and drop events to load log files.
   document.addEventListener("dragover", function(event) {
     event.stopPropagation();
     event.preventDefault();
@@ -1205,7 +1207,7 @@ $().ready(function() {
     }
   });
 
-  // Manage interactive file selector
+  // Manage interactive file selector.
   var filepicker = document.getElementById("filepicker");
 
   filepicker.addEventListener("change", function(event) {
