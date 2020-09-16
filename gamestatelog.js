@@ -213,7 +213,7 @@ class Canvas {
         time = $("#time_selector").val(),
         // Get the log entry for the given time.
         entry = log.getEntriesAtTime(time);
-        // Get the object from the given entry.
+      // Get the object from the given entry and store it persistently in the Canvas class.
       this._selectedObject = entry[id];
 
       // Clear the infobox and don't bother continuing if the entry isn't valid.
@@ -491,7 +491,7 @@ class Canvas {
         if (entry.type === "Nebula") {
           Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, halfTransparent, size5U / 2, this.nebulaImages[Math.floor(imageRNG() * 3)], rotation, true);
         } else if (entry.type === "BlackHole") {
-          Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, opaque, size5U / 2, blackHoleImage, rotation, true);
+          Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, opaque, size5U / 2, this.blackHoleImage, rotation, true);
         } else if (entry.type === "WormHole") {
           Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, opaque, size5U / 2, this.wormHoleImages[Math.floor(imageRNG() * 3)], rotation, true);
           // Canvas.drawCircle(ctxBg, positionX, positionY, this._zoomScale, "#800080", mostlyTransparent, size5U);
