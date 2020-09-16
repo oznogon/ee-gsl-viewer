@@ -263,10 +263,12 @@ class Canvas {
         }
       }
 
-      // Flag player ships.
+      entryMap.set("— Systems", "");
+      // Data by object type.
       switch (this._selectedObject.type) {
         case "PlayerSpaceship":
-          entryMap.set("type", `${this._selectedObject.ship_type} (Player)`);
+          entryMap.set("type", `${this._selectedObject.ship_type} (Player)`)
+            .set("energy", `${Math.floor(this._selectedObject.energy_level)}`);
           break;
         case "CpuShip":
           entryMap.set("type", `${this._selectedObject.ship_type}`);
