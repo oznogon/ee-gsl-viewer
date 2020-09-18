@@ -273,12 +273,10 @@ class Canvas {
         }
       }
 
-      entryMap.set("— Systems", "");
-      // Data by object type.
+      // Update type.
       switch (this._selectedObject.type) {
         case "PlayerSpaceship":
-          entryMap.set("type", `${this._selectedObject.ship_type} (Player)`)
-            .set("energy", `${Math.floor(this._selectedObject.energy_level)}`);
+          entryMap.set("type", `${this._selectedObject.ship_type} (Player)`);
           break;
         case "CpuShip":
           entryMap.set("type", `${this._selectedObject.ship_type}`);
