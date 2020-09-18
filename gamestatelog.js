@@ -184,6 +184,7 @@ class Canvas {
     // Initialize zoom scale at 20U = 100 pixels.
     this._zoomScale = zoomScalePixels / zoomScaleUnits;
     this.showCallsigns = false;
+    $("#zoom_selector").val(this._zoomScale * 1000.0);
 
     // Update the initialized canvas.
     this.update();
