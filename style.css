@@ -293,13 +293,15 @@ input[type=range]:focus::-ms-fill-upper {
 #infobox {
   display: none;
   font-size: 20px;
-  /* height: 46px; */
   left: 20px;
   padding: 10px 20px;
   position: absolute;
   text-align: left;
-  top: 60px;
+  top: 0px;
+  margin: 60px 0;
   width: 320px;
+  max-height: 85%;
+  overflow-y: scroll;
 }
 
 #infobox p,
