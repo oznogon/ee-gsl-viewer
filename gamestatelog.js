@@ -217,129 +217,157 @@ class Canvas {
       // Get the object from the given entry and store it persistently in the Canvas class.
       this._selectedObject = entry[id];
 
-      // Clear the infobox and don't bother continuing if the entry isn't valid.
-      if (id < 1 || typeof this._selectedObject === "undefined") {
-        this._infobox.hide();
-        console.debug("Undefined entry: ", id);
-        return;
-      }
-
-      // Populate the infobox with data. TODO: Customize mapping by key type.
-      /* eslint-disable */
-      const infoboxContent = $("#infobox-content"),
-        entryList = {},
-        cssFaction = this._selectedObject.faction.split(" ").join("_") || "no_faction",
-        entryMap = new Map([
-          ["callsign", `<span class="ee-faction ee-faction-${cssFaction}">${this._selectedObject.callsign || "No callsign"} (${this._selectedObject.faction || "No faction"})</span>`],
-          // ["faction", this._selectedObject.faction || "No faction"],
-          ["type", ""],
-          ["— Navigation", ""],
-          ["position", `${this._selectedObject.position[0].toFixed(2)}, ${this._selectedObject.position[1].toFixed(2)}`],
-          ["heading", ""],
-          ["— Defense", ""],
-          ["hull", `${Math.floor(this._selectedObject.hull)} / ${this._selectedObject.config.hull} (${((this._selectedObject.hull / this._selectedObject.config.hull) * 100.0).toFixed(1)}%)`],
-        ]);
-      let infoboxContents = "",
-        // Rotation at 0.0 points right/east.
-        heading = this._selectedObject.rotation + 90.0;
-
-      // Normalize the heading to 0-360.
-      while (heading >= 360.0) {
-        heading -= 360.0;
-      }
-
-      // Set the heading in infobox data
-      entryMap.set("heading", heading.toFixed(1));
-
-      // List each shield segment.
-      if (this._selectedObject.hasOwnProperty("shields")) {
-        const shields = this._selectedObject.shields;
-        for (let shield = 0; shield < shields.length; shield += 1) {
-          const currentShield = this._selectedObject.shields[shield];
-          const maxShield = this._selectedObject.config.shields[shield];
-          entryMap.set(`shield ${shield + 1}`, `${Math.floor(currentShield)} / ${maxShield} (${((currentShield / maxShield) * 100.0).toFixed(1)}%)`);
-        }
-      }
-
-      // List ship missile stocks.
-      if (this._selectedObject.type === "PlayerSpaceship" || this._selectedObject.type === "CpuShip") {
-        if (this._selectedObject.hasOwnProperty("missiles")) {
-          entryMap.set("— Offense", "");
-          const currentMissiles = this._selectedObject.missiles;
-          const maxMissiles = this._selectedObject.config.missiles;
-          for (const missileType in currentMissiles) {
-            const currentMissileCount = currentMissiles[missileType];
-            const maxMissileCount = maxMissiles[missileType];
-            entryMap.set(missileType, `${currentMissileCount} / ${maxMissileCount} (${((currentMissileCount / maxMissileCount) * 100.0).toFixed(1)}%)`);
-          }
-        }
-      }
-
-      // Update type.
-      switch (this._selectedObject.type) {
-        case "PlayerSpaceship":
-          entryMap.set("type", `${this._selectedObject.ship_type} (Player)`);
-          break;
-        case "CpuShip":
-          entryMap.set("type", `${this._selectedObject.ship_type}`);
-          break;
-        case "SpaceStation":
-          entryMap.set("type", `${this._selectedObject.station_type}`);
-          break;
-        default:
-      }
-
-      /*
-       * Why does this work:
-       *
-       * console.debug((entry[id].faction).split(" ").join("_"));
-       *
-       * and this does not:
-       *
-       * console.debug((entry[id].faction).replace("/ +/_/gu"));
-       */
-
-      /*
-       * Map all entry keys to values and return them as strings.
-       *
-       * infoboxKeyValues = jQuery.map(entry[id], (value, key) => {
-       *   return `${key}: ${value}`;
-       * });
-       */
-
-      /*
-       * Convert relative mouse position on click to absolute world position.
-       *
-       * this._worldPoint = {
-       *   "x": this._view.x + ((event.clientX - (this._canvas[0].width / 2)) / this._zoomScale),
-       *   "y": this._view.y + ((event.clientY - (this._canvas[0].height / 2)) / this._zoomScale)
-       * };
-       */
-
-      /*
-       * console.debug("Hitbox color clicked:", pixel);
-       * console.debug("Object ID:", (pixel[0] * 256 * 256) + (pixel[1] * 256) + (pixel[2]));
-       * console.debug("Time: ", time);
-       * console.debug("Entry: ", entry);
-       * console.debug("Object clicked: ", entry[id], id);
-       * console.debug("Pixel value: ", pixel);
-       */
-
-      // Populate infobox with object info.
-      for (const row of entryMap) {
-        infoboxContents = infoboxContents.concat(`<tr class="ee-${row[0]}"><td class="ee-table-key">`, row.join(`</td><td class="ee-table-value">`), `</td>`);
-      };
-
-      // Show and populate the infobox.
-      this._infobox.show();
-      infoboxContent.html(infoboxContents);
-      // this._infobox.html(infoboxKeyValues.join("<br>"));
-      // this._infobox.html("<p>" + entry[id].type + "<br>" + entry[id].type + "</p>");
+      this.updateInfobox(this._selectedObject);
     } else {
       // Otherwise, we're dragging, so update lastMouse.
       this._lastMouse.x = event.clientX;
       this._lastMouse.y = event.clientY;
     }
+  }
+
+  updateInfobox (selectedObject = this._selectedObject) {
+    const {id} = selectedObject;
+    // Clear the infobox and don't bother continuing if the entry isn't valid.
+    if (id < 1 || typeof this._selectedObject === "undefined") {
+      this._infobox.hide();
+      console.debug("Undefined entry: ", id);
+      return;
+    }
+
+    // Populate the infobox with data. TODO: Customize mapping by key type.
+    /* eslint-disable */
+    const infoboxContent = $("#infobox-content"),
+      entryList = {},
+      cssFaction = selectedObject.faction.split(" ").join("_") || "no_faction",
+      entryMap = new Map([
+        ["callsign", `<span class="ee-faction ee-faction-${cssFaction}">${selectedObject.callsign || "No callsign"} (${selectedObject.faction || "No faction"})</span>`],
+        // ["faction", selectedObject.faction || "No faction"],
+        ["type", ""],
+        ["— Navigation", ""],
+        ["position", `${selectedObject.position[0].toFixed(2)}, ${selectedObject.position[1].toFixed(2)}`],
+        ["heading", ""],
+        ["— Defense", ""],
+        ["hull", `${Math.floor(selectedObject.hull)} / ${selectedObject.config.hull} (${((selectedObject.hull / selectedObject.config.hull) * 100.0).toFixed(1)}%)`],
+      ]);
+    let infoboxContents = "",
+      // Rotation at 0.0 points right/east.
+      heading = selectedObject.rotation + 90.0;
+
+    // Normalize the heading to 0-360.
+    while (heading >= 360.0) {
+      heading -= 360.0;
+    }
+
+    // Set the heading in infobox data.
+    entryMap.set("heading", heading.toFixed(1));
+
+    // List each shield segment.
+    if (selectedObject.hasOwnProperty("shields")) {
+      const shields = selectedObject.shields;
+      for (let shield = 0; shield < shields.length; shield += 1) {
+        const currentShield = selectedObject.shields[shield];
+        const maxShield = selectedObject.config.shields[shield];
+        entryMap.set(`shield ${shield + 1}`, `${Math.floor(currentShield)} / ${maxShield} (${((currentShield / maxShield) * 100.0).toFixed(1)}%)`);
+      }
+    }
+
+    // List ship missile stocks.
+    if (selectedObject.type === "PlayerSpaceship" || selectedObject.type === "CpuShip") {
+      if (selectedObject.hasOwnProperty("missiles")) {
+        entryMap.set("— Offense", "");
+        const currentMissiles = selectedObject.missiles;
+        const maxMissiles = selectedObject.config.missiles;
+        for (const missileType in currentMissiles) {
+          const currentMissileCount = currentMissiles[missileType];
+          const maxMissileCount = maxMissiles[missileType];
+          entryMap.set(missileType, `${currentMissileCount} / ${maxMissileCount} (${((currentMissileCount / maxMissileCount) * 100.0).toFixed(1)}%)`);
+        }
+      }
+    }
+
+    // Update type.
+    switch (selectedObject.type) {
+      case "PlayerSpaceship":
+        entryMap.set("type", `${selectedObject.ship_type} (Player)`);
+        break;
+      case "CpuShip":
+        entryMap.set("type", `${selectedObject.ship_type}`);
+        break;
+      case "SpaceStation":
+        entryMap.set("type", `${selectedObject.station_type}`);
+        break;
+      default:
+    }
+
+    // Systems data.
+    entryMap.set("— Systems", "");
+    switch (selectedObject.type) {
+      case "PlayerSpaceship":
+        entryMap.set("energy", `${Math.floor(selectedObject.energy_level)}`);
+      case "CpuShip":
+        const systems = selectedObject.systems;
+        console.debug(`systems: ${systems[0]}, ${systems[1]}`);
+        for (const [systemName, system] of Object.entries(systems)) {
+          entryMap.set(systemName, "");
+          console.debug(`In ${systemName} for ${systemName}`);
+          for (const [stateName, stateValue] of Object.entries(system)) {
+            console.debug(`In ${stateName} for ${systemName}`);
+            const statePercent = Math.floor(stateValue * 100.0);
+            if (stateName === "health") {
+              entryMap.set(systemName, `${statePercent}%`);
+            } else {
+              entryMap.set(`&nbsp;&nbsp;${stateName}`, `${statePercent}%`);
+            }
+          }
+        }
+        break;
+      default:
+    }
+
+    /*
+     * Why does this work:
+     *
+     * console.debug((entry[id].faction).split(" ").join("_"));
+     *
+     * and this does not:
+     *
+     * console.debug((entry[id].faction).replace("/ +/_/gu"));
+     */
+
+    /*
+     * Map all entry keys to values and return them as strings.
+     *
+     * infoboxKeyValues = jQuery.map(entry[id], (value, key) => {
+     *   return `${key}: ${value}`;
+     * });
+     */
+
+    /*
+     * Convert relative mouse position on click to absolute world position.
+     *
+     * this._worldPoint = {
+     *   "x": this._view.x + ((event.clientX - (this._canvas[0].width / 2)) / this._zoomScale),
+     *   "y": this._view.y + ((event.clientY - (this._canvas[0].height / 2)) / this._zoomScale)
+     * };
+     */
+
+    /*
+     * console.debug("Hitbox color clicked:", pixel);
+     * console.debug("Object ID:", (pixel[0] * 256 * 256) + (pixel[1] * 256) + (pixel[2]));
+     * console.debug("Time: ", time);
+     * console.debug("Entry: ", entry);
+     * console.debug("Object clicked: ", entry[id], id);
+     * console.debug("Pixel value: ", pixel);
+     */
+
+    // Populate infobox with object info.
+    for (const row of entryMap) {
+      infoboxContents = infoboxContents.concat(`<tr class="ee-${row[0]}"><td class="ee-table-key">`, row.join(`</td><td class="ee-table-value">`), `</td>`);
+    };
+
+    // Show and populate the infobox.
+    this._infobox.show();
+    infoboxContent.html(infoboxContents);
   }
 
   // Move view on mouse drag.
@@ -391,6 +419,7 @@ class Canvas {
 
       // Modify zoom based on delta.
       this._zoomScale += this._zoomScale * (delta * 100.0 / zoomScaleDivisor); //(1000.0 * delta) / zoomScaleDivisor;
+
       // Update zoom selector bar value with the new zoom scale.
       $("#zoom_selector").val(this._zoomScale * zoomScaleDivisor);
 
