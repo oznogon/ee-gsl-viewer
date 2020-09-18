@@ -225,7 +225,8 @@ class Canvas {
 
       // Populate the infobox with data. TODO: Customize mapping by key type.
       /* eslint-disable */
-      const entryList = {},
+      const infoboxContent = $("#infobox-content"),
+        entryList = {},
         cssFaction = this._selectedObject.faction.split(" ").join("_") || "no_faction",
         entryMap = new Map([
           ["callsign", `<span class="ee-faction ee-faction-${cssFaction}">${this._selectedObject.callsign || "No callsign"} (${this._selectedObject.faction || "No faction"})</span>`],
@@ -325,12 +326,12 @@ class Canvas {
 
       // Populate infobox with object info.
       for (const row of entryMap) {
-        infoboxContents = infoboxContents.concat(`<li class="ee-${row[0]}">`, row.join(": "), `</li>`);
+        infoboxContents = infoboxContents.concat(`<tr class="ee-${row[0]}"><td class="ee-table-key">`, row.join(`</td><td class="ee-table-value">`), `</td>`);
       };
 
       // Show and populate the infobox.
       this._infobox.show();
-      this._infobox.html(infoboxContents);
+      infoboxContent.html(infoboxContents);
       // this._infobox.html(infoboxKeyValues.join("<br>"));
       // this._infobox.html("<p>" + entry[id].type + "<br>" + entry[id].type + "</p>");
     } else {
@@ -563,7 +564,7 @@ class Canvas {
 
     // Draw the info line showing the scenario time, scale, X/Y coordinates, and sector designation.
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "20px 'Bebas Neue Regular', Impact, Arial, sans-serif";
+    ctx.font = "20px 'Bebas Neue', Impact, Arial, sans-serif";
     ctx.fillText(stateText, 20, 40);
 
     /*
@@ -658,7 +659,7 @@ class Canvas {
 
     // Draw sector designations on the grid, unless the grid is zoomed out far enough.
     ctx.fillStyle = gridlineColor;
-    ctx.font = "24px 'Bebas Neue Regular', Impact, Arial, sans-serif";
+    ctx.font = "24px 'Bebas Neue', Impact, Arial, sans-serif";
 
     if (gridlineHorizCanvasList.length <= 25 && gridlineVertCanvasList.length <= 25) {
       for (let eachGridlineHoriz = 0; eachGridlineHoriz < gridlineHorizCanvasList.length;
@@ -985,7 +986,7 @@ class Canvas {
 
     // Draw the callsign.
     ctx.fillStyle = Canvas.getFactionColor(entry.faction, lowColor, highColor);
-    ctx.font = `${fontSize}px 'Bebas Neue Regular', Impact, Arial, sans-serif`;
+    ctx.font = `${fontSize}px 'Bebas Neue', Impact, Arial, sans-serif`;
     ctx.fillText(entry.callsign, positionX + textDriftAmount, positionY + textDriftAmount);
   }
 
