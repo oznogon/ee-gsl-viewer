@@ -8,7 +8,7 @@
 /* eslint no-extra-parens: ["error", "functions"] */
 /* eslint-disable max-classes-per-file, no-console, max-statements, no-underscore-dangle, sort-vars */
 /* eslint-disable max-lines, max-lines-per-function, complexity, no-warning-comments, max-params */
-/* eslint-disable capitalized-comments, id-length */
+/* eslint-disable capitalized-comments, id-length, no-magic-numbers */
 
 /*
  * --------------------------------------------------------------------------------------------------------------------
@@ -41,7 +41,7 @@ class LogData {
           this.entries.push(JSON.parse(lines[lineIndex]));
         }
       } catch (err) {
-        console.debug("Read json line error: ", err);
+        console.debug(`Read json line error: ${err}`);
       }
     }
 
@@ -217,7 +217,12 @@ class Canvas {
       // Get the object from the given entry and store it persistently in the Canvas class.
       this._selectedObject = entry[id];
 
-      this.updateInfobox(this._selectedObject);
+      // Update the infobox if there's a selected object. Otherwise, hide it.
+      if (typeof this._selectedObject !== "undefined" && this._selectedObject.type !== "No selection") {
+        this.updateSelectionInfobox(time);
+      } else {
+        this._infobox.hide();
+      }
     } else {
       // Otherwise, we're dragging, so update lastMouse.
       this._lastMouse.x = event.clientX;
@@ -225,32 +230,62 @@ class Canvas {
     }
   }
 
-  updateInfobox (selectedObject = this._selectedObject) {
-    const {id} = selectedObject;
+  // Update the selected object for the current time.
+  updateSelection (timeValue = $("#time_selector").val()) {
+    const {id} = this._selectedObject,
+      entry = log.getEntriesAtTime(timeValue);
+
+    this._selectedObject = entry[id];
+  }
+
+  updateSelectionInfobox (timeValue = $("#time_selector").val()) {
+    const selectedObject = this._selectedObject;
     // Clear the infobox and don't bother continuing if the entry isn't valid.
-    if (id < 1 || typeof this._selectedObject === "undefined") {
+    if (selectedObject === null || selectedObject.id < 1 || typeof selectedObject === "undefined" || selectedObject.type === "No selection") {
       this._infobox.hide();
-      console.debug("Undefined entry: ", id);
+      console.debug(`Undefined entry: ${this._selectedObject.id}`);
       return;
     }
 
+    // Update the selected object for the current time.
+    this.updateSelection(timeValue);
+
     // Populate the infobox with data. TODO: Customize mapping by key type.
-    /* eslint-disable */
     const infoboxContent = $("#infobox-content"),
-      entryList = {},
       cssFaction = selectedObject.faction.split(" ").join("_") || "no_faction",
       entryMap = new Map([
-        ["callsign", `<span class="ee-faction ee-faction-${cssFaction}">${selectedObject.callsign || "No callsign"} (${selectedObject.faction || "No faction"})</span>`],
+        [
+          "callsign",
+          `<span class="ee-faction ee-faction-${cssFaction}">${selectedObject.callsign || "No callsign"} (${selectedObject.faction || "No faction"})</span>`
+        ],
         // ["faction", selectedObject.faction || "No faction"],
-        ["type", ""],
-        ["— Navigation", ""],
-        ["position", `${selectedObject.position[0].toFixed(2)}, ${selectedObject.position[1].toFixed(2)}`],
-        ["heading", ""],
-        ["— Defense", ""],
-        ["hull", `${Math.floor(selectedObject.hull)} / ${selectedObject.config.hull} (${((selectedObject.hull / selectedObject.config.hull) * 100.0).toFixed(1)}%)`],
+        [
+          "type",
+          ""
+        ],
+        [
+          "— Navigation",
+          ""
+        ],
+        [
+          "position",
+          `${selectedObject.position[0].toFixed(2)}, ${selectedObject.position[1].toFixed(2)}`
+        ],
+        [
+          "heading",
+          ""
+        ],
+        [
+          "— Defense",
+          ""
+        ],
+        [
+          "hull",
+          `${Math.floor(selectedObject.hull)} / ${selectedObject.config.hull} (${((selectedObject.hull / selectedObject.config.hull) * 100.0).toFixed(1)}%)`
+        ]
       ]);
     let infoboxContents = "",
-      // Rotation at 0.0 points right/east.
+      // Rotation at 0.0 points right/east. Adjust it so 0.0 points up/north.
       heading = selectedObject.rotation + 90.0;
 
     // Normalize the heading to 0-360.
@@ -263,10 +298,11 @@ class Canvas {
 
     // List each shield segment.
     if (selectedObject.hasOwnProperty("shields")) {
-      const shields = selectedObject.shields;
+      const {shields} = selectedObject;
       for (let shield = 0; shield < shields.length; shield += 1) {
-        const currentShield = selectedObject.shields[shield];
-        const maxShield = selectedObject.config.shields[shield];
+        const currentShield = selectedObject.shields[shield],
+          maxShield = selectedObject.config.shields[shield];
+
         entryMap.set(`shield ${shield + 1}`, `${Math.floor(currentShield)} / ${maxShield} (${((currentShield / maxShield) * 100.0).toFixed(1)}%)`);
       }
     }
@@ -274,12 +310,14 @@ class Canvas {
     // List ship missile stocks.
     if (selectedObject.type === "PlayerSpaceship" || selectedObject.type === "CpuShip") {
       if (selectedObject.hasOwnProperty("missiles")) {
+        const currentMissiles = selectedObject.missiles,
+          maxMissiles = selectedObject.config.missiles;
+
         entryMap.set("— Offense", "");
-        const currentMissiles = selectedObject.missiles;
-        const maxMissiles = selectedObject.config.missiles;
         for (const missileType in currentMissiles) {
-          const currentMissileCount = currentMissiles[missileType];
-          const maxMissileCount = maxMissiles[missileType];
+          const currentMissileCount = currentMissiles[missileType],
+            maxMissileCount = maxMissiles[missileType];
+
           entryMap.set(missileType, `${currentMissileCount} / ${maxMissileCount} (${((currentMissileCount / maxMissileCount) * 100.0).toFixed(1)}%)`);
         }
       }
@@ -287,41 +325,42 @@ class Canvas {
 
     // Update type.
     switch (selectedObject.type) {
-      case "PlayerSpaceship":
-        entryMap.set("type", `${selectedObject.ship_type} (Player)`);
-        break;
-      case "CpuShip":
-        entryMap.set("type", `${selectedObject.ship_type}`);
-        break;
-      case "SpaceStation":
-        entryMap.set("type", `${selectedObject.station_type}`);
-        break;
-      default:
+    case "PlayerSpaceship":
+      entryMap.set("type", `${selectedObject.ship_type} (Player)`);
+      break;
+    case "CpuShip":
+      entryMap.set("type", `${selectedObject.ship_type}`);
+      break;
+    case "SpaceStation":
+      entryMap.set("type", `${selectedObject.station_type}`);
+      break;
+    default:
     }
 
     // Systems data.
     entryMap.set("— Systems", "");
+
     switch (selectedObject.type) {
-      case "PlayerSpaceship":
-        entryMap.set("energy", `${Math.floor(selectedObject.energy_level)}`);
-      case "CpuShip":
-        const systems = selectedObject.systems;
-        console.debug(`systems: ${systems[0]}, ${systems[1]}`);
-        for (const [systemName, system] of Object.entries(systems)) {
-          entryMap.set(systemName, "");
-          console.debug(`In ${systemName} for ${systemName}`);
-          for (const [stateName, stateValue] of Object.entries(system)) {
-            console.debug(`In ${stateName} for ${systemName}`);
-            const statePercent = Math.floor(stateValue * 100.0);
-            if (stateName === "health") {
-              entryMap.set(systemName, `${statePercent}%`);
-            } else {
-              entryMap.set(`&nbsp;&nbsp;${stateName}`, `${statePercent}%`);
-            }
+    case "PlayerSpaceship":
+      entryMap.set("energy", `${Math.floor(selectedObject.energy_level)}`);
+    case "CpuShip":
+      const {systems} = selectedObject;
+
+      for (const [systemName, system] of Object.entries(systems)) {
+        entryMap.set(systemName, "");
+
+        for (const [stateName, stateValue] of Object.entries(system)) {
+          const statePercent = Math.floor(stateValue * 100.0);
+
+          if (stateName === "health") {
+            entryMap.set(systemName, `${statePercent}%`);
+          } else {
+            entryMap.set(`&nbsp;&nbsp;${stateName}`, `${statePercent}%`);
           }
         }
-        break;
-      default:
+      }
+      break;
+    default:
     }
 
     /*
@@ -363,7 +402,7 @@ class Canvas {
     // Populate infobox with object info.
     for (const row of entryMap) {
       infoboxContents = infoboxContents.concat(`<tr class="ee-${row[0]}"><td class="ee-table-key">`, row.join(`</td><td class="ee-table-value">`), `</td>`);
-    };
+    }
 
     // Show and populate the infobox.
     this._infobox.show();
@@ -391,14 +430,13 @@ class Canvas {
 
   // Zoom view when using the mouse wheel.
   _mouseWheel (event) {
-    // Throttle mousewheel zoom to no more than once every 50ms.
-    // https://codeburst.io/throttling-and-debouncing-in-javascript-b01cad5c8edf
+    // Throttle mousewheel zoom to no more than once every 50ms. https://codeburst.io/throttling-and-debouncing-in-javascript-b01cad5c8edf
     if (!this._zoomThrottle) {
       this._zoomThrottle = true;
       setTimeout(() => this._zoomThrottle = false, 50);
 
-      const wheelDelta = event.originalEvent.wheelDelta,
-        deltaY = event.originalEvent.deltaY,
+      const {wheelDelta} = event.originalEvent,
+        {deltaY} = event.originalEvent,
         zoomScaleDivisor = 1000.0;
       let delta = 0.0;
 
@@ -418,7 +456,7 @@ class Canvas {
       }
 
       // Modify zoom based on delta.
-      this._zoomScale += this._zoomScale * (delta * 100.0 / zoomScaleDivisor); //(1000.0 * delta) / zoomScaleDivisor;
+      this._zoomScale += this._zoomScale * (delta * 100.0 / zoomScaleDivisor);
 
       // Update zoom selector bar value with the new zoom scale.
       $("#zoom_selector").val(this._zoomScale * zoomScaleDivisor);
@@ -443,6 +481,12 @@ class Canvas {
     // Don't bother doing anything else if we don't have a log to read.
     if (!log) {
       return;
+    }
+
+    // If an object is selected, lock the viewport on it.
+    if (typeof this._selectedObject !== "undefined" && this._selectedObject.type !== "No selection" && this._selectedObject.id > 0) {
+      this._view.x = this._selectedObject.position[0];
+      this._view.y = this._selectedObject.position[1];
     }
 
     // Set the current scenario time to the time selector's current value. (Should start at 0:00)
@@ -524,8 +568,6 @@ class Canvas {
           sizeMin = 2,
           // Initialize RNG variable for nebula images.
           imageRNG = alea(`${entry.id}`);
-        // Initialize ID color code. Codes with any red value but 00 in the green component won't be calculated.
-        let idToHex = "#FF00FF";
 
         if (entry.type === "Nebula") {
           Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, halfTransparent, size5U / 2, this.nebulaImages[Math.floor(imageRNG() * 3)], rotation, true);
@@ -586,7 +628,7 @@ class Canvas {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#00FFFF", halfTransparent, sizeExplosion);
         } else {
           // If an object is an unknown type, log a debug message and display it in fuscia.
-          console.debug("Unknown object type: ", entry.type);
+          console.debug(`Unknown object type: ${entry.type}`);
           Canvas.drawSquare(ctx, positionX, positionY, this._zoomScale, "#FF00FF", opaque, sizeMin);
         }
       }
@@ -848,9 +890,9 @@ class Canvas {
 
     // Draw the shape.
     ctx.beginPath();
-    ctx.moveTo(positionX + hexSize * Math.cos(0), positionY + hexSize * Math.sin(0));
+    ctx.moveTo(positionX + (hexSize * Math.cos(0)), positionY + (hexSize * Math.sin(0)));
     for (let side = 0; side < 7; side += 1) {
-      ctx.lineTo(positionX + hexSize * Math.cos(side * 2 * Math.PI / 6), positionY + hexSize * Math.sin(side * 2 * Math.PI / 6));
+      ctx.lineTo(positionX + (hexSize * Math.cos(side * 2 * Math.PI / 6)), positionY + (hexSize * Math.sin(side * 2 * Math.PI / 6)));
     }
     ctx.fill();
 
@@ -926,11 +968,13 @@ class Canvas {
     }
 
     // Convert the result.
-    return result = {
+    result = {
       "blue": parseInt(result.blue, 16),
       "green": parseInt(result.green, 16),
       "red": parseInt(result.red, 16)
     };
+
+    return result;
   }
 
   // Convert an integer color code component to a hex value.
@@ -1191,7 +1235,6 @@ function loadLog (data) {
 
   if (log.entries.length > 0) {
     $("#dropzone").hide();
-    console.debug(log.getMaxTime());
     $("#time_selector").attr("max", log.getMaxTime());
     canvas.update();
   }
@@ -1200,9 +1243,20 @@ function loadLog (data) {
 // Programmatically advance the time selector.
 function autoPlay (isAutoplaying) {
   let timeValue = parseInt($("#time_selector").val());
+
+  // Advance the timeline by 1 second. TODO: Make adjustible.
   timeValue += 1;
   $("#time_selector").val(timeValue);
+
+  // Update the canvas.
   canvas.update();
+
+  // Update the infobox if there's a selected object. Otherwise, hide it.
+  if (typeof canvas._selectedObject !== "undefined" && canvas._selectedObject.type !== "No selection") {
+    canvas.updateSelectionInfobox(timeValue);
+  } else {
+    canvas._infobox.hide();
+  }
 
   // If we reach the end, stop autoplaying.
   if (parseInt($("#time_selector").val()) >= parseInt($("#time_selector").attr("max"))) {
@@ -1273,7 +1327,17 @@ $().ready(function() {
 
   // Update the canvas when the time selector is modified.
   $("#time_selector").on("input change", function (/*event*/) {
+    const timeValue = $("#time_selector").val();
+
+    // Update the canvas.
     canvas.update();
+
+    // Update the infobox if there's a selected object. Otherwise, hide it.
+    if (typeof canvas._selectedObject !== "undefined" && canvas._selectedObject.type !== "No selection") {
+      canvas.updateSelectionInfobox(timeValue);
+    } else {
+      canvas._infobox.hide();
+    }
   });
 
   // Zoom bar.
@@ -1289,6 +1353,7 @@ $().ready(function() {
     if (log !== null) {
       isAutoplaying = !isAutoplaying;
 
+      // If autoplaying is enabled, activate the button and check if we've reached the end.
       if (isAutoplaying === true) {
         if (parseInt($("#time_selector").val()) >= parseInt($("#time_selector").attr("max"))) {
           $("#time_selector").val(0);
@@ -1312,10 +1377,13 @@ $().ready(function() {
   }, 100);
 
   // Track whether to show callsigns.
-  $("#callsigns").on("click", function(/*event*/) {
+  $("#callsigns").on("click", function (/*event*/) {
+    // If a log's loaded, toggle callsigns and update the canvas.
     if (log !== null) {
       canvas.showCallsigns = !canvas.showCallsigns;
       canvas.update();
+
+      // Change the button's activation class if toggled.
       if (canvas.showCallsigns === true) {
         $("#callsigns").addClass("ee-button-active");
       } else {
