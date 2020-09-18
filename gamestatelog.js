@@ -233,11 +233,21 @@ class Canvas {
           ["type", ""],
           ["— Navigation", ""],
           ["position", `${this._selectedObject.position[0].toFixed(2)}, ${this._selectedObject.position[1].toFixed(2)}`],
-          ["heading", `${this._selectedObject.rotation.toFixed(1)}`],
+          ["heading", ""],
           ["— Defense", ""],
           ["hull", `${Math.floor(this._selectedObject.hull)} / ${this._selectedObject.config.hull} (${((this._selectedObject.hull / this._selectedObject.config.hull) * 100.0).toFixed(1)}%)`],
         ]);
-      let infoboxContents = "";
+      let infoboxContents = "",
+        // Rotation at 0.0 points right/east.
+        heading = this._selectedObject.rotation + 90.0;
+
+      // Normalize the heading to 0-360.
+      while (heading >= 360.0) {
+        heading -= 360.0;
+      }
+
+      // Set the heading in infobox data
+      entryMap.set("heading", heading.toFixed(1));
 
       // List each shield segment.
       if (this._selectedObject.hasOwnProperty("shields")) {
