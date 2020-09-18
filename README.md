@@ -15,5 +15,6 @@ Demonstration of a scenario being played back in the game state log viewer: http
 - Toggle callsign displays by clicking the "Callsigns" button.
 - Zoom with your mouse wheel or by dragging the zoom slider at top right.
 - Click and drag on the map to scroll.
+- Click a ship or station to lock the camera onto that object and display stats, such as its shield and hull strength, weapons, etc.
 
 Based on `logs/index.html` in the EmptyEpsilon repository: https://github.com/daid/EmptyEpsilon/blob/master/logs/index.html
