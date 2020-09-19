@@ -4,13 +4,20 @@
   <head>
     <meta charset="utf-8">
     <title>EmptyEpsilon game state log viewer</title>
+
+    <!-- jQuery as used by the original index.html -->
     <script src="jquery.min.js"></script>
+    <!-- Mousetrap to handle keyboard shortcuts -->
+    <script src="mousetrap.min.js"></script>
+    <!-- Alea RNG for random nebula and wormhole images -->
     <script src="alea.min.js"></script>
+
+    <!-- CSS for buttons, sliders, faction colors -->
     <link href="style.css" rel="stylesheet">
   </head>
 
   <body>
-    <!-- Canvases -->
+    <!-- Canvases; bg for grid and terrain, fg for objects. Hitbox is drawn in-script. -->
     <canvas id="canvas-bg"></canvas>
     <canvas id="canvas-fg"></canvas>
 
@@ -28,12 +35,6 @@
     <button class="ee-button" id="zoom_out">-</button>
     <button class="ee-button" id="lock_view">Lock</button>
 
-    <!-- Content loading screen -->
-    <div class="ee-box" id="dropzone">
-      <p id="droptarget">Drop log file here</p>
-      <input id="filepicker" type="file">
-    </div>
-
     <!-- Selection infobox -->
     <div id="infobox">
       <div id="infobox-scroll-container">
@@ -41,7 +42,13 @@
       </div>
     </div>
 
-    <!-- Script -->
+    <!-- Content loading screen -->
+    <div class="ee-box" id="dropzone">
+      <p id="droptarget">Drop log file here</p>
+      <input id="filepicker" type="file">
+    </div>
+
+    <!-- Log loading and canvas drawing script -->
     <script src="gamestatelog.js"></script>
   </body>
 
