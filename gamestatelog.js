@@ -818,8 +818,9 @@ class Canvas {
   }
 
   /*
-   * Get a color code for the faction, with specified magnitude for the color mix.
-   * Would be nice to use the GM colors directly from factioninfo.lua. Returns a long hex color string (ie. #FF0000).
+   * Get a hex color code for the faction, with specified magnitude for the color mix.
+   * Would be nice to use the GM colors directly from factioninfo.lua.
+   * Returns a long hex color string (ie. #FF0000).
    */
   static getFactionColor (faction, lowColorMagnitude, highColorMagnitude) {
     let lowColor = `${lowColorMagnitude}`,
@@ -834,48 +835,43 @@ class Canvas {
       highColor = `${highColorMagnitude}${highColorMagnitude}`;
     }
 
-    /*
-     * From factionInfo.lua:
-     *
-     * neutral:setGMColor(128, 128, 128)
-     * human:setGMColor(255, 255, 255)
-     * kraylor:setGMColor(255, 0, 0)
-     * arlenians:setGMColor(255, 128, 0)
-     * exuari:setGMColor(255, 0, 128)
-     * GITM:setGMColor(0, 255, 0)
-     * Hive:setGMColor(128, 255, 0)
-     * TSN:setGMColor(255, 255, 128)
-     * USN:setGMColor(255, 128, 255)
-     * CUF:setGMColor(128, 255, 255)
-     */
-
-    if (faction === "Human Navy") {
+    // Faction colors from factionInfo.lua.
+    switch (faction) {
+    case "Human Navy":
+      // human:setGMColor(255, 255, 255)
       return `#${highColor}${highColor}${highColor}`;
-    } else if (faction === "Independent") {
-      return `#${lowColor}${lowColor}${lowColor}`;
-    } else if (faction === "Kraylor") {
+    case "Kraylor":
+      // kraylor:setGMColor(255, 0, 0)
       return `#${highColor}0000`;
-    } else if (faction === "Arlenians") {
+    case "Independent":
+      // neutral:setGMColor(128, 128, 128)
+      return `#${lowColor}${lowColor}${lowColor}`;
+    case "Arlenians":
+      // arlenians:setGMColor(255, 128, 0)
       return `#${highColor}${lowColor}00`;
-    } else if (faction === "Exuari") {
+    case "Exuari":
+      // exuari:setGMColor(255, 0, 128)
       return `#${highColor}00${lowColor}`;
-    } else if (faction === "Ghosts") {
-      // GITM in factionInfo.lua
+    case "Ghosts":
+      // GITM:setGMColor(0, 255, 0)
       return `#00${highColor}00`;
-    } else if (faction === "Ktlitans") {
-      // Hive in factionInfo.lua
+    case "Ktlitans":
+      // Hive:setGMColor(128, 255, 0)
       return `#${lowColor}${highColor}00`;
-    } else if (faction === "TSN") {
+    case "TSN":
+      // TSN:setGMColor(255, 255, 128)
       return `#${highColor}${highColor}${lowColor}`;
-    } else if (faction === "USN") {
+    case "USN":
+      // USN:setGMColor(255, 128, 255)
       return `#${highColor}${lowColor}${highColor}`;
-    } else if (faction === "CUF") {
+    case "CUF":
+      // CUF:setGMColor(128, 255, 255)
       return `#${lowColor}${highColor}${highColor}`;
+    default:
+      // Everybody else is fuschia.
+      console.debug(`Unknown faction: ${faction}`);
+      return "#FF00FF";
     }
-
-    // Everybody else is fuschia.
-    console.debug(`Unknown faction: ${faction}`);
-    return "#FF00FF";
   }
 
   // Return an effective minimum size for the square, unless its size modifier is huge.
