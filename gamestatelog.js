@@ -181,9 +181,12 @@ class Canvas {
       "x": 0.0,
       "y": 0.0
     };
+
+    // Disable callsigns by default.
+    this.showCallsigns = false;
+
     // Initialize zoom scale at 20U = 100 pixels.
     this._zoomScale = zoomScalePixels / zoomScaleUnits;
-    this.showCallsigns = false;
     $("#zoom_selector").val(this._zoomScale * 1000.0);
 
     // Update the initialized canvas.
@@ -214,13 +217,21 @@ class Canvas {
         time = $("#time_selector").val(),
         // Get the log entry for the given time.
         entry = log.getEntriesAtTime(time);
-      // Get the object from the given entry and store it persistently in the Canvas class.
+
       this._selectedObject = entry[id];
 
-      // Update the infobox if there's a selected object. Otherwise, hide it.
-      if (typeof this._selectedObject !== "undefined" && this._selectedObject.type !== "No selection") {
+      // Confirm whether the selection is valid.
+      if (Canvas.isSelectionValid(this._selectedObject) === true) {
+        // Update the infobox with this object's info for this point in time.
         this.updateSelectionInfobox(time);
+
+        // Point the camera at the selected object and update the canvas.
+        this.pointCameraAt(this._selectedObject.position[0], this._selectedObject.position[1]);
+
+        // Update the canvas.
+        this.update();
       } else {
+        // Otherwise, hide the infobox if there's no selected object.
         this._infobox.hide();
       }
     } else {
@@ -230,7 +241,55 @@ class Canvas {
     }
   }
 
-  // Update the selected object for the current time.
+  // Check whether the given object is defined, and still present and valid.
+  static isSelectionValid (selectedObject) {
+    // selectedObject can't have a default value. https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Default_parameters#Passing_undefined_vs._other_falsy_values
+    if (isUndefined(selectedObject) ||
+      selectedObject === null) {
+      // If the object is undefined or null, it's invalid.
+      console.debug(`Object is invalid: ${selectedObject}`);
+      return false;
+    } else if (selectedObject.id < 1 ||
+      selectedObject.type === "No selection") {
+      // If the object has an invalid ID or explicitly "No selection", nothing's selected.
+      console.debug("No object selected");
+      return false;
+    }
+
+    // Must be valid otherwise.
+    return true;
+  }
+
+  pointCameraAt (positionX, positionY) {
+    if (typeof positionX === "number" && typeof positionY === "number") {
+      this._view.x = positionX;
+      this._view.y = positionY;
+    } else {
+      console.error(`Invalid position values ${positionX}, ${positionY}`);
+    }
+  }
+
+  // Zoom camera in (positive values) or out (negative values).
+  zoomCamera (zoomFactor = 1, zoomValue = null) {
+    // If a valid zoomValue is passed, just go to it.
+    if (zoomValue > 0 && zoomValue < 0.15) {
+      this._zoomScale = zoomValue;
+    } else if (zoomFactor > -3 && zoomFactor < 3) {
+      // Otherwise, zoom in or out relative to the existing zoomScale by the given zoomFactor.
+      this._zoomScale = Math.max(0.002, Math.min(0.15, this._zoomScale + (zoomFactor * (Math.max(0.001, Math.min(0.1, this._zoomScale * this._zoomScale))))));
+    } else {
+      console.error("Invalid zoomValue or zoomFactor");
+      return;
+    }
+
+    // Update the Canvas.
+    this.update();
+
+    // Update zoom selector bar value with the new zoom scale.
+    $("#zoom_selector").val(this._zoomScale * 1000.0);
+  }
+
+  // Update the selected object for the current point in the timeline.
   updateSelection (timeValue = $("#time_selector").val()) {
     const {id} = this._selectedObject,
       entry = log.getEntriesAtTime(timeValue);
@@ -239,13 +298,14 @@ class Canvas {
   }
 
   updateSelectionInfobox (timeValue = $("#time_selector").val()) {
-    const selectedObject = this._selectedObject;
     // Clear the infobox and don't bother continuing if the entry isn't valid.
-    if (selectedObject === null || selectedObject.id < 1 || typeof selectedObject === "undefined" || selectedObject.type === "No selection") {
+    if (Canvas.isSelectionValid(this._selectedObject) === false) {
       this._infobox.hide();
-      console.debug(`Undefined entry: ${this._selectedObject.id}`);
       return;
     }
+
+    // Reference the Canvas's selected object.
+    const selectedObject = this._selectedObject;
 
     // Update the selected object for the current time.
     this.updateSelection(timeValue);
@@ -483,10 +543,9 @@ class Canvas {
       return;
     }
 
-    // If an object is selected, lock the viewport on it.
-    if (typeof this._selectedObject !== "undefined" && this._selectedObject.type !== "No selection" && this._selectedObject.id > 0) {
-      this._view.x = this._selectedObject.position[0];
-      this._view.y = this._selectedObject.position[1];
+    // If a valid object is selected, lock the viewport on it.
+    if (Canvas.isSelectionValid(this._selectedObject) === true) {
+      this.pointCameraAt(this._selectedObject.position[0], this._selectedObject.position[1]);
     }
 
     // Set the current scenario time to the time selector's current value. (Should start at 0:00)
@@ -628,7 +687,7 @@ class Canvas {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#00FFFF", halfTransparent, sizeExplosion);
         } else {
           // If an object is an unknown type, log a debug message and display it in fuscia.
-          console.debug(`Unknown object type: ${entry.type}`);
+          console.error(`Unknown object type: ${entry.type}`);
           Canvas.drawSquare(ctx, positionX, positionY, this._zoomScale, "#FF00FF", opaque, sizeMin);
         }
       }
@@ -1229,6 +1288,13 @@ class Canvas {
  * --------------------------------------------------------------------------------------------------------------------
  */
 
+// The hell is wrong with you, javascript? https://www.codereadability.com/how-to-check-for-undefined-in-javascript/
+function isUndefined (value) {
+  // Obtain "undefined" value that's guaranteed to not have been re-assigned.
+  const undefined = void(0);
+  return value === undefined;
+}
+
 // Load log data, hide the dropzone div, and setup the time selector.
 function loadLog (data) {
   log = new LogData(data);
@@ -1344,6 +1410,29 @@ $().ready(function() {
   $("#zoom_selector").on("input change", function (/*event*/) {
     canvas._zoomScale = $("#zoom_selector").val() / 1000;
     canvas.update();
+  });
+
+  // Zoom buttons
+  let zoomTimeout = 0;
+
+  $("#zoomin").on("touchstart mousedown", function (/*event*/) {
+    zoomTimeout = setInterval(function () {
+      canvas.zoomCamera(1);
+    }, 50);
+  }).on("click", function (/*event*/) {
+    canvas.zoomCamera(1);
+  }).on("mouseup mouseleave touchend", function (/*event*/) {
+    clearInterval(zoomTimeout);
+  });
+
+  $("#zoomout").on("touchstart mousedown", function (/*event*/) {
+    zoomTimeout = setInterval(function () {
+      canvas.zoomCamera(-1);
+    }, 50);
+  }).on("click", function (/*event*/) {
+      canvas.zoomCamera(-1);
+  }).on("mouseup mouseleave touchend", function (/*event*/) {
+    clearInterval(zoomTimeout);
   });
 
   // Track the play/pause button.
