@@ -1529,16 +1529,11 @@ $().ready(function () {
 
   // Cycle through autoplay speed options.
   $("#autoplay_speed").on("click", function (/* event */) {
-    console.debug("playbackUpdateInterval", playbackUpdateInterval);
-    console.debug("playbackUpdateOptions", playbackUpdateOptions);
     for (let index = playbackUpdateOptions.length - 1; index >= 0; index -= 1) {
-      console.debug("playbackUpdateOptions[index]", playbackUpdateOptions[index]);
       // Loop through options to get the index of our current setting.
       if (playbackUpdateInterval === playbackUpdateOptions[index]) {
-        console.debug("playbackUpdateOptions[index + 1]", playbackUpdateOptions[index + 1]);
         if (typeof playbackUpdateOptions[index + 1] === "undefined") {
           if (typeof playbackUpdateOptions[0] === "undefined") {
-            console.error("No valid playbackUpdateOptions index");
             return;
           }
 
