@@ -104,6 +104,8 @@ class Canvas {
   constructor () {
     // Initialize tracking for throttling zoom/mousewheel events.
     this._zoomThrottle = false;
+    // Initialize view locking on selected objects.
+    this.isViewLocked = false;
     // Get canvases for background (grid, terrain) and foreground (ships, stations) objects.
     this._backgroundCanvas = $("#canvas-bg");
     this._canvas = $("#canvas-fg");
@@ -225,11 +227,13 @@ class Canvas {
         // Update the infobox with this object's info for this point in time.
         this.updateSelectionInfobox(time);
 
-        // Point the camera at the selected object and update the canvas.
-        this.pointCameraAt(this._selectedObject.position[0], this._selectedObject.position[1]);
+        // If view locking is enabled, point the camera at the selected object.
+        if (this.isViewLocked === true) {
+          this.pointCameraAt(this._selectedObject.position[0], this._selectedObject.position[1]);
 
-        // Update the canvas.
-        this.update();
+          // Update the canvas.
+          this.update();
+        }
       } else {
         // Otherwise, hide the infobox if there's no selected object.
         this._infobox.hide();
@@ -543,8 +547,8 @@ class Canvas {
       return;
     }
 
-    // If a valid object is selected, lock the viewport on it.
-    if (Canvas.isSelectionValid(this._selectedObject) === true) {
+    // If a valid object is selected and view locking is enabled, lock the viewport on it.
+    if (Canvas.isSelectionValid(this._selectedObject) === true && this.isViewLocked === true) {
       this.pointCameraAt(this._selectedObject.position[0], this._selectedObject.position[1]);
     }
 
@@ -1344,21 +1348,21 @@ function formatTime (time) {
 // Main function.
 $().ready(function() {
   // Listen from drag and drop events to load log files.
-  document.addEventListener("dragover", function(event) {
+  document.addEventListener("dragover", function (event) {
     event.stopPropagation();
     event.preventDefault();
     event.dataTransfer.dropEffect = "copy";
   });
 
-  document.addEventListener("drop", function(event) {
+  document.addEventListener("drop", function (event) {
     event.stopPropagation();
     event.preventDefault();
 
     const files = event.dataTransfer.files;
 
     // eslint-disable-next-line no-cond-assign
-    for (var fileIndex = 0, file; file = files[fileIndex]; fileIndex++) {
-      var reader = new FileReader();
+    for (let fileIndex = 0, file; file = files[fileIndex]; fileIndex++) {
+      const reader = new FileReader();
 
       reader.onload = function(event2) {
         loadLog(event2.target.result);
@@ -1369,18 +1373,21 @@ $().ready(function() {
   });
 
   // Manage interactive file selector.
-  var filepicker = document.getElementById("filepicker");
+  const filepicker = document.getElementById("filepicker");
+
+  // Initialize playback update interval in ms per frame.
+  let playbackUpdateInterval = 100;
 
   filepicker.addEventListener("change", function(event) {
     event.stopPropagation();
     event.preventDefault();
 
-    var file = filepicker.files[0];
-    var reader = new FileReader();
+    const file = filepicker.files[0];
+    const reader = new FileReader();
 
     if (file) {
       reader.onload = function(e2) {
-        var contents = e2.target.result;
+        const contents = e2.target.result;
         loadLog(contents);
       };
 
@@ -1412,10 +1419,10 @@ $().ready(function() {
     canvas.update();
   });
 
-  // Zoom buttons
+  // Zoom buttons.
   let zoomTimeout = 0;
 
-  $("#zoomin").on("touchstart mousedown", function (/*event*/) {
+  $("#zoom_in").on("touchstart mousedown", function (/*event*/) {
     zoomTimeout = setInterval(function () {
       canvas.zoomCamera(1);
     }, 50);
@@ -1425,7 +1432,7 @@ $().ready(function() {
     clearInterval(zoomTimeout);
   });
 
-  $("#zoomout").on("touchstart mousedown", function (/*event*/) {
+  $("#zoom_out").on("touchstart mousedown", function (/*event*/) {
     zoomTimeout = setInterval(function () {
       canvas.zoomCamera(-1);
     }, 50);
@@ -1437,6 +1444,24 @@ $().ready(function() {
 
   // Track the play/pause button.
   var isAutoplaying = false;
+
+  $("#lock_view").on("click", function (/*event*/) {
+    // If the view is locked on a valid selected object, toggle the button.
+    if (log !== null) {
+      canvas.isViewLocked = !canvas.isViewLocked;
+
+      if (canvas.isViewLocked === true) {
+        $("#lock_view").addClass("ee-button-active");
+
+        // If a valid object is selected when activating the button, move the camera.
+        if (Canvas.isSelectionValid(canvas._selectedObject) === true) {
+          canvas.update();
+        }
+      } else {
+        $("#lock_view").removeClass("ee-button-active");
+      }
+    }
+  });
 
   $("#autoplay").on("click", function (/*event*/) {
     if (log !== null) {
@@ -1463,7 +1488,7 @@ $().ready(function() {
     } else {
       $("#autoplay").removeClass("ee-button-active");
     }
-  }, 100);
+  }, playbackUpdateInterval);
 
   // Track whether to show callsigns.
   $("#callsigns").on("click", function (/*event*/) {

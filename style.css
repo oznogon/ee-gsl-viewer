@@ -380,22 +380,22 @@ input[type=range]:focus::-ms-fill-upper {
   width: 150px;
 }
 
-#zoomin,
-#zoomout,
-#lockview {
+#zoom_in,
+#zoom_out,
+#lock_view {
   position: absolute;
   right: 20px;
   width: 40px;
 }
 
-#zoomin {
+#zoom_in {
   top: 20px;
 }
 
-#zoomout {
+#zoom_out {
   top: 225px;
 }
 
-#lockview {
+#lock_view {
   top: 275px;
 }
