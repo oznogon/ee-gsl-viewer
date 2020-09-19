@@ -465,7 +465,7 @@ class Canvas {
 
     // Populate infobox with object info.
     for (const row of entryMap) {
-      infoboxContents = infoboxContents.concat(`<tr class="ee-${row[0]}"><td class="ee-table-key">`, row.join(`</td><td class="ee-table-value">`), `</td>`);
+      infoboxContents = infoboxContents.concat(`<tr class="ee-${row[0]}"><td class="ee-table-key">`, row.join("</td><td class=\"ee-table-value\">"), "</td>");
     }
 
     // Show and populate the infobox.
@@ -500,8 +500,7 @@ class Canvas {
       setTimeout(() => this._zoomThrottle = false, 50);
 
       const {wheelDelta} = event.originalEvent,
-        {deltaY} = event.originalEvent,
-        zoomScaleDivisor = 1000.0;
+        {deltaY} = event.originalEvent;
       let delta = 0.0;
 
       // Cross-browser/platform delta normalization isn't easy: https://stackoverflow.com/questions/5527601/normalizing-mousewheel-speed-across-browsers
@@ -520,13 +519,7 @@ class Canvas {
       }
 
       // Modify zoom based on delta.
-      this._zoomScale += this._zoomScale * (delta * 100.0 / zoomScaleDivisor);
-
-      // Update zoom selector bar value with the new zoom scale.
-      $("#zoom_selector").val(this._zoomScale * zoomScaleDivisor);
-
-      // Update the canvas.
-      this.update();
+      this.zoomCamera(delta);
     }
   }
 
@@ -1425,21 +1418,25 @@ $().ready(function() {
   $("#zoom_in").on("touchstart mousedown", function (/*event*/) {
     zoomTimeout = setInterval(function () {
       canvas.zoomCamera(1);
+      $("#zoom_in").addClass("ee-button-active");
     }, 50);
   }).on("click", function (/*event*/) {
     canvas.zoomCamera(1);
   }).on("mouseup mouseleave touchend", function (/*event*/) {
     clearInterval(zoomTimeout);
+    $("#zoom_in").removeClass("ee-button-active");
   });
 
   $("#zoom_out").on("touchstart mousedown", function (/*event*/) {
     zoomTimeout = setInterval(function () {
       canvas.zoomCamera(-1);
+      $("#zoom_out").addClass("ee-button-active");
     }, 50);
   }).on("click", function (/*event*/) {
       canvas.zoomCamera(-1);
   }).on("mouseup mouseleave touchend", function (/*event*/) {
     clearInterval(zoomTimeout);
+    $("#zoom_out").removeClass("ee-button-active");
   });
 
   // Track the play/pause button.
