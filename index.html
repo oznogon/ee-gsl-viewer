@@ -16,7 +16,12 @@
       <input id="time_selector" type="range" min="0" max="0" value="0">
       <button class="ee-button" id="callsigns">Callsigns</button>
     </div>
-    <input id="zoom_selector" type="range" min="2" max="150"> <!-- smaller range than mouse wheel -->
+    <!-- Navigation -->
+    <input id="zoom_selector" type="range" min="2" max="150">
+    <button class="ee-button" id="zoomin">+</button>
+    <button class="ee-button" id="zoomout">-</button>
+    <button class="ee-button" id="lockview">Lock</button>
+    <!-- Content loading screen -->
     <div class="ee-box" id="dropzone">
       <p id="droptarget">Drop log file here</p>
       <input id="filepicker" type="file">
