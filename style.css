@@ -393,3 +393,7 @@ input[type=range]:focus::-ms-fill-upper {
 #lock_view {
   top: 265px;
 }
+
+#autoplay_speed {
+  width: 75px;
+}

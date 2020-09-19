@@ -1,20 +1,20 @@
 /* eslint-env jquery */
 /* eslint semi: "error", indent: ["error", 2] */
-/* eslint no-magic-numbers: ["error", { "ignoreArrayIndexes": true }] */
-/* eslint no-magic-numbers: ["error", { "ignore": [0, 1] }] */
 /* eslint padded-blocks: ["error", "never"] */
 /* eslint function-call-argument-newline: ["error", "never"] */
 /* eslint max-len: ["warn", { "code": 120 }] */
 /* eslint no-extra-parens: ["error", "functions"] */
 /* eslint-disable max-classes-per-file, no-console, max-statements, no-underscore-dangle, sort-vars */
 /* eslint-disable max-lines, max-lines-per-function, complexity, no-warning-comments, max-params */
-/* eslint-disable capitalized-comments, id-length, no-magic-numbers */
+/* eslint-disable capitalized-comments, id-length, no-magic-numbers, strict, func-style, no-inline-comments */
+/* eslint-disable no-fallthrough */
 
 /*
  * --------------------------------------------------------------------------------------------------------------------
  * Global values.
  * --------------------------------------------------------------------------------------------------------------------
  */
+
 let log,
   canvas;
 // Each sector is a 20U (20000) square.
@@ -104,34 +104,43 @@ class Canvas {
   constructor () {
     // Initialize tracking for throttling zoom/mousewheel events.
     this._zoomThrottle = false;
+
     // Initialize view locking on selected objects.
     this.isViewLocked = false;
+
     // Get canvases for background (grid, terrain) and foreground (ships, stations) objects.
     this._backgroundCanvas = $("#canvas-bg");
     this._canvas = $("#canvas-fg");
+
     // Get the infobox for displaying selected object data.
     this._infobox = $("#infobox");
+
     // Initialize the currently selected object.
     this._selectedObject = {
       "type": "No selection"
     };
+
     // Initialize Image objects for rendering sprites.
     this.nebulaImages = [
       new Image(),
       new Image(),
       new Image()
     ];
+
     for (let i = 0; i < this.nebulaImages.length; i += 1) {
       this.nebulaImages[i].src = `images/Nebula${i + 1}.png`;
     }
+
     this.wormHoleImages = [
       new Image(),
       new Image(),
       new Image()
     ];
+
     for (let i = 0; i < this.wormHoleImages.length; i += 1) {
       this.wormHoleImages[i].src = `images/wormHole${i + 1}.png`;
     }
+
     this.blackHoleImage = new Image();
     this.blackHoleImage.src = "images/blackHole3d.png";
 
@@ -203,6 +212,7 @@ class Canvas {
     this._lastMouse.y = this._firstMouse.y;
   }
 
+  // Handle the end of click/drag events.
   _mouseUp (event) {
     // Detect a non-drag click by confirming the mouse didn't move since mousedown.
     if (this._lastMouse.x === this._firstMouse.x && this._lastMouse.y === this._firstMouse.y) {
@@ -264,6 +274,7 @@ class Canvas {
     return true;
   }
 
+  // Move the camera to the given world-space coordinates.
   pointCameraAt (positionX, positionY) {
     if (typeof positionX === "number" && typeof positionY === "number") {
       this._view.x = positionX;
@@ -273,7 +284,7 @@ class Canvas {
     }
   }
 
-  // Zoom camera in (positive values) or out (negative values).
+  // Zoom camera in (positive zoomFactor), out (negative zoomFactor), or to a given level (zoomValue).
   zoomCamera (zoomFactor = 1, zoomValue = null) {
     // If a valid zoomValue is passed, just go to it.
     if (zoomValue > 0 && zoomValue < 0.15) {
@@ -302,7 +313,7 @@ class Canvas {
   }
 
   updateSelectionInfobox (timeValue = $("#time_selector").val()) {
-    // Clear the infobox and don't bother continuing if the entry isn't valid.
+    // Clear the infobox and don't bother continuing if the selected object isn't valid.
     if (Canvas.isSelectionValid(this._selectedObject) === false) {
       this._infobox.hide();
       return;
@@ -315,6 +326,7 @@ class Canvas {
     this.updateSelection(timeValue);
 
     // Populate the infobox with data. TODO: Customize mapping by key type.
+    // eslint-disable-next-line one-var
     const infoboxContent = $("#infobox-content"),
       cssFaction = selectedObject.faction.split(" ").join("_") || "no_faction",
       entryMap = new Map([
@@ -361,7 +373,7 @@ class Canvas {
     entryMap.set("heading", heading.toFixed(1));
 
     // List each shield segment.
-    if (selectedObject.hasOwnProperty("shields")) {
+    if (Object.prototype.hasOwnProperty.call(selectedObject, "shields")) {
       const {shields} = selectedObject;
       for (let shield = 0; shield < shields.length; shield += 1) {
         const currentShield = selectedObject.shields[shield],
@@ -373,16 +385,18 @@ class Canvas {
 
     // List ship missile stocks.
     if (selectedObject.type === "PlayerSpaceship" || selectedObject.type === "CpuShip") {
-      if (selectedObject.hasOwnProperty("missiles")) {
+      if (Object.prototype.hasOwnProperty.call(selectedObject, "missiles")) {
         const currentMissiles = selectedObject.missiles,
           maxMissiles = selectedObject.config.missiles;
 
         entryMap.set("— Offense", "");
         for (const missileType in currentMissiles) {
-          const currentMissileCount = currentMissiles[missileType],
-            maxMissileCount = maxMissiles[missileType];
+          if (Object.prototype.hasOwnProperty.call(currentMissiles, missileType)) {
+            const currentMissileCount = currentMissiles[missileType],
+              maxMissileCount = maxMissiles[missileType];
 
-          entryMap.set(missileType, `${currentMissileCount} / ${maxMissileCount} (${((currentMissileCount / maxMissileCount) * 100.0).toFixed(1)}%)`);
+            entryMap.set(missileType, `${currentMissileCount} / ${maxMissileCount} (${((currentMissileCount / maxMissileCount) * 100.0).toFixed(1)}%)`);
+          }
         }
       }
     }
@@ -494,10 +508,13 @@ class Canvas {
 
   // Zoom view when using the mouse wheel.
   _mouseWheel (event) {
-    // Throttle mousewheel zoom to no more than once every 50ms. https://codeburst.io/throttling-and-debouncing-in-javascript-b01cad5c8edf
+    // Throttle mousewheel zoom to update no more than once every 16.67ms. https://codeburst.io/throttling-and-debouncing-in-javascript-b01cad5c8edf
     if (!this._zoomThrottle) {
       this._zoomThrottle = true;
-      setTimeout(() => this._zoomThrottle = false, 50);
+
+      setTimeout(() => {
+        this._zoomThrottle = false;
+      }, 16.67);
 
       const {wheelDelta} = event.originalEvent,
         {deltaY} = event.originalEvent;
@@ -1186,16 +1203,18 @@ class Canvas {
       factionColor = overrideFillColor;
     }
 
-    // Draw shield arcs if the object has them. #4
-    // For each segment in entry.shields.
-    //  Divide a circle into equal sized arcs.
-    //  Draw each arc at an alpha value relative to its current percentile strength.
-    //  Max is in the entry.config.shields array.
-
-    // Draw hull strength bar. #4
-    // For entry.hull.
-    //  Draw the width at a value relative to its current percentile strength.
-    //  Max is in entry.config.hull.
+    /*
+     * Draw shield arcs if the object has them. #4
+     * For each segment in entry.shields.
+     *  Divide a circle into equal sized arcs.
+     *  Draw each arc at an alpha value relative to its current percentile strength.
+     *  Max is in the entry.config.shields array.
+     *
+     * Draw hull strength bar. #4
+     * For entry.hull.
+     *  Draw the width at a value relative to its current percentile strength.
+     *  Max is in entry.config.hull.
+     */
 
     // Draw beam arcs if the object has them and we're not drawing on the hit canvas.
     if (typeof entry.config !== "undefined" && typeof entry.config.beams !== "undefined" && !drawingOnHitCanvas) {
@@ -1284,11 +1303,14 @@ class Canvas {
  * Functions.
  * --------------------------------------------------------------------------------------------------------------------
  */
+/* eslint-disable prefer-arrow-callback, func-names, no-implicit-globals */
 
 // The hell is wrong with you, javascript? https://www.codereadability.com/how-to-check-for-undefined-in-javascript/
 function isUndefined (value) {
   // Obtain "undefined" value that's guaranteed to not have been re-assigned.
-  const undefined = void(0);
+  // eslint-disable-next-line no-shadow-restricted-names, no-undefined, no-void, space-unary-ops
+  const undefined = void (0);
+  // eslint-disable-next-line no-undefined
   return value === undefined;
 }
 
@@ -1305,7 +1327,7 @@ function loadLog (data) {
 
 // Programmatically advance the time selector.
 function autoPlay (isAutoplaying) {
-  let timeValue = parseInt($("#time_selector").val());
+  let timeValue = parseInt($("#time_selector").val(), 10);
 
   // Advance the timeline by 1 second. TODO: Make adjustible.
   timeValue += 1;
@@ -1322,7 +1344,7 @@ function autoPlay (isAutoplaying) {
   }
 
   // If we reach the end, stop autoplaying.
-  if (parseInt($("#time_selector").val()) >= parseInt($("#time_selector").attr("max"))) {
+  if (parseInt($("#time_selector").val(), 10) >= parseInt($("#time_selector").attr("max"), 10)) {
     return !isAutoplaying;
   }
 
@@ -1333,13 +1355,14 @@ function autoPlay (isAutoplaying) {
 // Format scenario time into MM:SS.
 function formatTime (time) {
   if (time % 60 < 10) {
-    return Math.floor(time / 60) + ":0" + (time % 60);
+    return `${Math.floor(time / 60)}:0${time % 60}`;
   }
-  return Math.floor(time / 60) + ":" + (time % 60);
+
+  return `${Math.floor(time / 60)}:${time % 60}`;
 }
 
 // Main function.
-$().ready(function() {
+$().ready(function () {
   // Listen from drag and drop events to load log files.
   document.addEventListener("dragover", function (event) {
     event.stopPropagation();
@@ -1351,13 +1374,13 @@ $().ready(function() {
     event.stopPropagation();
     event.preventDefault();
 
-    const files = event.dataTransfer.files;
+    const {files} = event.dataTransfer;
 
     // eslint-disable-next-line no-cond-assign
-    for (let fileIndex = 0, file; file = files[fileIndex]; fileIndex++) {
+    for (let fileIndex = 0, file; file = files[fileIndex]; fileIndex += 1) {
       const reader = new FileReader();
 
-      reader.onload = function(event2) {
+      reader.onload = function (event2) {
         loadLog(event2.target.result);
       };
 
@@ -1366,20 +1389,31 @@ $().ready(function() {
   });
 
   // Manage interactive file selector.
-  const filepicker = document.getElementById("filepicker");
+  const filepicker = document.getElementById("filepicker"),
+    // Define options for playbackUpdateInterval.
+    playbackUpdateOptions = [
+      1000,
+      500,
+      250,
+      100,
+      50,
+      25
+    ];
 
   // Initialize playback update interval in ms per frame.
-  let playbackUpdateInterval = 100;
+  let playbackUpdateInterval = playbackUpdateOptions[2],
+    zoomTimeout = 0,
+    isAutoplaying = false;
 
-  filepicker.addEventListener("change", function(event) {
+  filepicker.addEventListener("change", function (event) {
     event.stopPropagation();
     event.preventDefault();
 
-    const file = filepicker.files[0];
-    const reader = new FileReader();
+    const [file] = filepicker.files,
+      reader = new FileReader();
 
     if (file) {
-      reader.onload = function(e2) {
+      reader.onload = function (e2) {
         const contents = e2.target.result;
         loadLog(contents);
       };
@@ -1392,7 +1426,7 @@ $().ready(function() {
   canvas = new Canvas();
 
   // Update the canvas when the time selector is modified.
-  $("#time_selector").on("input change", function (/*event*/) {
+  $("#time_selector").on("input change", function (/* event */) {
     const timeValue = $("#time_selector").val();
 
     // Update the canvas.
@@ -1407,42 +1441,40 @@ $().ready(function() {
   });
 
   // Zoom bar.
-  $("#zoom_selector").on("input change", function (/*event*/) {
+  $("#zoom_selector").on("input change", function (/* event */) {
     canvas._zoomScale = $("#zoom_selector").val() / 1000;
     canvas.update();
   });
 
-  // Zoom buttons.
-  let zoomTimeout = 0;
-
-  $("#zoom_in").on("touchstart mousedown", function (/*event*/) {
+  $("#zoom_in").on("touchstart mousedown", function (/* event */) {
     zoomTimeout = setInterval(function () {
       canvas.zoomCamera(1);
       $("#zoom_in").addClass("ee-button-active");
     }, 50);
-  }).on("click", function (/*event*/) {
-    canvas.zoomCamera(1);
-  }).on("mouseup mouseleave touchend", function (/*event*/) {
-    clearInterval(zoomTimeout);
-    $("#zoom_in").removeClass("ee-button-active");
-  });
+  }).
+    on("click", function (/* event */) {
+      canvas.zoomCamera(1);
+    }).
+    on("mouseup mouseleave touchend", function (/* event */) {
+      clearInterval(zoomTimeout);
+      $("#zoom_in").removeClass("ee-button-active");
+    });
 
-  $("#zoom_out").on("touchstart mousedown", function (/*event*/) {
+  $("#zoom_out").on("touchstart mousedown", function (/* event */) {
     zoomTimeout = setInterval(function () {
       canvas.zoomCamera(-1);
       $("#zoom_out").addClass("ee-button-active");
     }, 50);
-  }).on("click", function (/*event*/) {
+  }).
+    on("click", function (/* event */) {
       canvas.zoomCamera(-1);
-  }).on("mouseup mouseleave touchend", function (/*event*/) {
-    clearInterval(zoomTimeout);
-    $("#zoom_out").removeClass("ee-button-active");
-  });
+    }).
+    on("mouseup mouseleave touchend", function (/* event */) {
+      clearInterval(zoomTimeout);
+      $("#zoom_out").removeClass("ee-button-active");
+    });
 
-  // Track the play/pause button.
-  var isAutoplaying = false;
-
-  $("#lock_view").on("click", function (/*event*/) {
+  $("#lock_view").on("click", function (/* event */) {
     // If the view is locked on a valid selected object, toggle the button.
     if (log !== null) {
       canvas.isViewLocked = !canvas.isViewLocked;
@@ -1460,35 +1492,76 @@ $().ready(function() {
     }
   });
 
-  $("#autoplay").on("click", function (/*event*/) {
+  function resetAutoplay (autoplayLoop) {
+    // Clear and reset the autoplay interval to change it.
+    clearInterval(autoplayLoop);
+
+    return setInterval(function () {
+      if (isAutoplaying === true) {
+        isAutoplaying = autoPlay(isAutoplaying);
+        $("#autoplay").addClass("ee-button-active");
+      } else {
+        $("#autoplay").removeClass("ee-button-active");
+      }
+    }, playbackUpdateInterval);
+  }
+
+  // On an interval when autoplay is enabled, increment the time controller.
+  // eslint-disable-next-line no-unused-vars, one-var
+  let loopAutoplay = 0;
+  loopAutoplay = resetAutoplay(loopAutoplay);
+
+  $("#autoplay").on("click", function (/* event */) {
     if (log !== null) {
+      // Toggle autoplaying state.
       isAutoplaying = !isAutoplaying;
 
       // If autoplaying is enabled, activate the button and check if we've reached the end.
       if (isAutoplaying === true) {
-        if (parseInt($("#time_selector").val()) >= parseInt($("#time_selector").attr("max"))) {
+        if (parseInt($("#time_selector").val(), 10) >= parseInt($("#time_selector").attr("max"), 10)) {
           $("#time_selector").val(0);
         }
-
-        $("#autoplay").addClass("ee-button-active");
       } else {
         $("#autoplay").removeClass("ee-button-active");
       }
     }
   });
 
-  // On an interval when autoplay is enabled, increment the time controller.
-  // eslint-disable-next-line no-unused-vars
-  var loopAutoplay = setInterval(function () {
-    if (isAutoplaying === true) {
-      isAutoplaying = autoPlay(isAutoplaying);
-    } else {
-      $("#autoplay").removeClass("ee-button-active");
+  // Cycle through autoplay speed options.
+  $("#autoplay_speed").on("click", function (/* event */) {
+    console.debug("playbackUpdateInterval", playbackUpdateInterval);
+    console.debug("playbackUpdateOptions", playbackUpdateOptions);
+    for (let index = playbackUpdateOptions.length - 1; index >= 0; index -= 1) {
+      console.debug("playbackUpdateOptions[index]", playbackUpdateOptions[index]);
+      // Loop through options to get the index of our current setting.
+      if (playbackUpdateInterval === playbackUpdateOptions[index]) {
+        console.debug("playbackUpdateOptions[index + 1]", playbackUpdateOptions[index + 1]);
+        if (typeof playbackUpdateOptions[index + 1] === "undefined") {
+          if (typeof playbackUpdateOptions[0] === "undefined") {
+            console.error("No valid playbackUpdateOptions index");
+            return;
+          }
+
+          // If we're at the end of options, loop back to the first option.
+          [playbackUpdateInterval] = playbackUpdateOptions;
+          break;
+        } else {
+          // Otherwise, use the next update option in the list.
+          playbackUpdateInterval = playbackUpdateOptions[index + 1];
+          break;
+        }
+      }
     }
-  }, playbackUpdateInterval);
+
+    // If we're in the middle of autoplaying, resume at the new interval.
+    loopAutoplay = resetAutoplay(loopAutoplay);
+
+    // Update button text.
+    $("#autoplay_speed").text(`${Math.floor(1000 / playbackUpdateInterval)}x`);
+  });
 
   // Track whether to show callsigns.
-  $("#callsigns").on("click", function (/*event*/) {
+  $("#callsigns").on("click", function (/* event */) {
     // If a log's loaded, toggle callsigns and update the canvas.
     if (log !== null) {
       canvas.showCallsigns = !canvas.showCallsigns;
