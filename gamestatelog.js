@@ -612,7 +612,7 @@ class Canvas {
     this._zoomScale = Math.min(maxZoom, Math.max(minZoom, this._zoomScale));
 
     // Draw the canvas background.
-    ctxBg.fillStyle = "#000";
+    ctxBg.fillStyle = "#000000";
     ctxBg.fillRect(0, 0, width, height);
 
     // Draw the background grid.
