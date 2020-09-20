@@ -179,12 +179,12 @@ class Canvas {
     if (Canvas.isUndefined(selectedObject) ||
       selectedObject === null) {
       // If the object is undefined or null, it's invalid.
-      console.debug(`Object is invalid: ${selectedObject}`);
+      // console.debug(`Object is invalid: ${selectedObject}`);
       return false;
     } else if (selectedObject.id < 1 ||
       selectedObject.type === "No selection") {
       // If the object has an invalid ID or explicitly "No selection", nothing's selected.
-      console.debug("No object selected");
+      // console.debug("No object selected");
       return false;
     }
 
@@ -357,42 +357,6 @@ class Canvas {
       break;
     default:
     }
-
-    /*
-     * Why does this work:
-     *
-     * console.debug((entry[id].faction).split(" ").join("_"));
-     *
-     * and this does not:
-     *
-     * console.debug((entry[id].faction).replace("/ +/_/gu"));
-     */
-
-    /*
-     * Map all entry keys to values and return them as strings.
-     *
-     * infoboxKeyValues = jQuery.map(entry[id], (value, key) => {
-     *   return `${key}: ${value}`;
-     * });
-     */
-
-    /*
-     * Convert relative mouse position on click to absolute world position.
-     *
-     * this._worldPoint = {
-     *   "x": this._view.x + ((event.clientX - (this._canvas[0].width / 2)) / this._zoomScale),
-     *   "y": this._view.y + ((event.clientY - (this._canvas[0].height / 2)) / this._zoomScale)
-     * };
-     */
-
-    /*
-     * console.debug("Hitbox color clicked:", pixel);
-     * console.debug("Object ID:", (pixel[0] * 256 * 256) + (pixel[1] * 256) + (pixel[2]));
-     * console.debug("Time: ", time);
-     * console.debug("Entry: ", entry);
-     * console.debug("Object clicked: ", entry[id], id);
-     * console.debug("Pixel value: ", pixel);
-     */
 
     // Populate infobox with object info.
     for (const row of entryMap) {
@@ -648,8 +612,6 @@ class Canvas {
       // Sector numbers are 0-99. Sector at 0,0 always ends in 5.
       sectorNumber = 5 + Math.floor(positionX / sectorSize);
 
-    console.debug(sectorLetter, sectorLetter.charCodeAt());
-
     // If the sector number would be out of range, loop it around by 100.
     while (sectorNumber < 0) {
       sectorNumber += 100;
@@ -813,7 +775,7 @@ class Canvas {
       return `#${lowColor}${highColor}${highColor}`;
     default:
       // Everybody else is fuschia.
-      console.debug(`Unknown faction: ${faction}`);
+      console.error(`Unknown faction: ${faction}`);
       return "#FF00FF";
     }
   }

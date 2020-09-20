@@ -13,7 +13,7 @@ class LogData {
           this.entries.push(JSON.parse(lines[lineIndex]));
         }
       } catch (err) {
-        console.debug(`Read json line error: ${err}`);
+        console.error(`Read json line error: ${err}`);
       }
     }
 
