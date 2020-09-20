@@ -1,6 +1,14 @@
 // Create and manage the HTML canvas to visualize game state at a point in time.
 class Canvas {
   constructor () {
+    // Load fonts for canvas use.
+    document.fonts.load("20pt 'Bebas Neue Thin'");
+    document.fonts.load("20pt 'Bebas Neue Light'");
+    document.fonts.load("20pt 'Bebas Neue Book'");
+    document.fonts.load("20pt 'Bebas Neue Regular'");
+    document.fonts.load("20pt 'Bebas Neue Bold'");
+    document.fonts.load("20pt 'EmptyEpsilon Icons'");
+
     // Each sector is a 20U square.
     this.sectorSize = 20000.0;
 
@@ -594,16 +602,8 @@ class Canvas {
 
     // Draw the info line showing the scenario time, scale, X/Y coordinates, and sector designation.
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "20px 'Bebas Neue', Impact, Arial, sans-serif";
+    ctx.font = "20px 'Bebas Neue Book', Impact, Arial, sans-serif";
     ctx.fillText(stateText, 20, 40);
-
-    /*
-     * Debug hitCanvas by drawing it.
-     *
-     * ctx.globalAlpha = 0.5;
-     * ctx.drawImage(this._hitCanvas, 0, 0);
-     * ctx.globalAlpha = 1.0;
-     */
   }
 
   /*
@@ -710,7 +710,7 @@ class Canvas {
 
     // Draw sector designations on the grid, unless the grid is zoomed out far enough.
     ctx.fillStyle = gridlineColor;
-    ctx.font = "24px 'Bebas Neue', Impact, Arial, sans-serif";
+    ctx.font = "24px 'Bebas Neue Regular', Impact, Arial, sans-serif";
 
     if (gridlineHorizCanvasList.length <= 25 && gridlineVertCanvasList.length <= 25) {
       for (let eachGridlineHoriz = 0; eachGridlineHoriz < gridlineHorizCanvasList.length;
@@ -1032,11 +1032,19 @@ class Canvas {
   static drawCallsign (ctx, positionX, positionY, zoomScale, entry, fontSize, lowColor, highColor, textDrift) {
     // Callsign should be off center and to the side of the object.
     const textDriftAmount = Math.max((textDrift * 66.666) * zoomScale, textDrift);
+    let callsignText = entry.callsign;
 
-    // Draw the callsign.
+    // Draw the callsign above the object.
     ctx.fillStyle = Canvas.getFactionColor(entry.faction, lowColor, highColor);
-    ctx.font = `${fontSize}px 'Bebas Neue', Impact, Arial, sans-serif`;
-    ctx.fillText(entry.callsign, positionX + textDriftAmount, positionY + textDriftAmount);
+    ctx.textAlign = "center";
+    ctx.font = `${fontSize}px 'Bebas Neue Book', Impact, Arial, sans-serif`;
+    if (entry.type === "PlayerSpaceship") {
+      callsignText = `${callsignText} (Player)`;
+    }
+    ctx.fillText(callsignText, positionX, positionY - textDriftAmount);
+
+    // Reset text alignment.
+    ctx.textAlign = "left";
   }
 
   // Draw a station.
@@ -1077,7 +1085,7 @@ class Canvas {
 
     // Draw the station's callsign, if callsigns are enabled.
     if (this.showCallsigns === true) {
-      Canvas.drawCallsign(ctx, positionX, positionY, this._zoomScale, entry, "18", lowColorMagnitude, highColorMagnitude, sizeModifier / Math.PI);
+      Canvas.drawCallsign(ctx, positionX, positionY, this._zoomScale, entry, "18", lowColorMagnitude, highColorMagnitude, 5 + (sizeModifier / Math.PI));
     }
   }
 
@@ -1154,7 +1162,7 @@ class Canvas {
 
     // Draw its callsign. Draw player callsigns brighter.
     if (this.showCallsigns === true) {
-      Canvas.drawCallsign(ctx, positionX, positionY, this._zoomScale, entry, "18", lowColorMagnitude, highColorMagnitude, 2);
+      Canvas.drawCallsign(ctx, positionX, positionY, this._zoomScale, entry, "18", lowColorMagnitude, highColorMagnitude, 5);
     }
   }
 
