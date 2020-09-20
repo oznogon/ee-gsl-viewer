@@ -15,10 +15,7 @@
  * --------------------------------------------------------------------------------------------------------------------
  */
 
-let log,
-  canvas;
-// Each sector is a 20U (20000) square.
-const sectorSize = 20000.0;
+let log;
 
 /*
  * --------------------------------------------------------------------------------------------------------------------
@@ -102,6 +99,9 @@ class LogData {
 // Create and manage the HTML canvas to visualize game state at a point in time.
 class Canvas {
   constructor () {
+    // Each sector is a 20U square.
+    this.sectorSize = 20000.0;
+
     // Initialize tracking for throttling zoom/mousewheel events.
     this._zoomThrottle = false;
 
@@ -153,7 +153,7 @@ class Canvas {
 
     // 100px = 20000U, or 1 sector
     const zoomScalePixels = 100.0,
-      zoomScaleUnits = sectorSize;
+      zoomScaleUnits = this.sectorSize;
 
     // Handle canvas mouse events.
     this._canvas.mousedown((event) => this._mouseDown(event));
@@ -253,6 +253,15 @@ class Canvas {
       this._lastMouse.x = event.clientX;
       this._lastMouse.y = event.clientY;
     }
+  }
+
+  // Format scenario time into MM:SS.
+  static formatTime (time) {
+    if (time % 60 < 10) {
+      return `${Math.floor(time / 60)}:0${time % 60}`;
+    }
+
+    return `${Math.floor(time / 60)}:${time % 60}`;
   }
 
   // Check whether the given object is defined, and still present and valid.
@@ -577,11 +586,11 @@ class Canvas {
       // For each entry at the given time, determine its type and draw an appropriate shape.
       entries = log.getEntriesAtTime(time),
       // Current position and zoom text bar values.
-      stateTextTime = formatTime(time),
+      stateTextTime = Canvas.formatTime(time),
       stateTextZoom = `100px = ${(0.1 / this._zoomScale).toPrecision(3)}U`,
       stateTextX = `X: ${this._view.x.toPrecision(6)}`,
       stateTextY = `Y: ${this._view.y.toPrecision(6)}`,
-      stateTextSector = `(${Canvas.getSectorDesignation(this._view.x, this._view.y)})`,
+      stateTextSector = `(${Canvas.getSectorDesignation(this._view.x, this._view.y, this.sectorSize)})`,
       // TODO: Fix out-of-range sector designations in-game.
       stateText = `${stateTextTime} / ${stateTextZoom} / ${stateTextX} / ${stateTextY} ${stateTextSector}`;
 
@@ -616,7 +625,7 @@ class Canvas {
     ctxBg.fillRect(0, 0, width, height);
 
     // Draw the background grid.
-    this.drawGrid(ctxBg, this._view.x, this._view.y, width, height, sectorSize, "#202040");
+    this.drawGrid(ctxBg, this._view.x, this._view.y, width, height, this.sectorSize, "#202040");
 
     for (const id in entries) {
       if (Object.prototype.hasOwnProperty.call(entries, id)) {
@@ -725,18 +734,45 @@ class Canvas {
    * Sectors are designated with a letter (Y axis) and number (X axis). Coordinates 0, 0 represent the intersection of
    * F and 5. Each sector is a 20U (20000) square.
    */
-  static getSectorDesignation (positionX, positionY) {
-    // TODO: Fix out-of-range sector designations in-game.
-    const sectorLetter = String.fromCharCode("F".charCodeAt() + Math.floor(positionY / sectorSize));
-    // Sector numbers are 0-99. Sector at 0,0 always ends in 5.
-    let sectorNumber = 5 + Math.floor(positionX / sectorSize);
+  static getSectorDesignation (positionX, positionY, sectorSize) {
+    let sectorLetter = String.fromCharCode("F".charCodeAt() + Math.floor(positionY / sectorSize)),
+      sectorLetterBigDigit = "",
+      // Sector numbers are 0-99. Sector at 0,0 always ends in 5.
+      sectorNumber = 5 + Math.floor(positionX / sectorSize);
 
-    // If the sector number would be negative, loop it around by 100.
-    if (sectorNumber < 0) {
+    console.debug(sectorLetter, sectorLetter.charCodeAt());
+
+    // If the sector number would be out of range, loop it around by 100.
+    while (sectorNumber < 0) {
       sectorNumber += 100;
     }
 
-    return `${sectorLetter}${sectorNumber}`;
+    while (sectorNumber > 100) {
+      sectorNumber -= 100;
+    }
+
+    // If the sector letter would be out of range, add a second digit and loop back to "A".
+    while (sectorLetter.charCodeAt() > "Z".charCodeAt()) {
+      if (sectorLetterBigDigit === "") {
+        sectorLetterBigDigit = "A";
+      } else {
+        sectorLetterBigDigit = String.fromCharCode(sectorLetterBigDigit.charCodeAt() + 1);
+      }
+
+      sectorLetter = String.fromCharCode(sectorLetter.charCodeAt() - 26);
+    }
+
+    while (sectorLetter.charCodeAt() < "A".charCodeAt()) {
+      if (sectorLetterBigDigit === "") {
+        sectorLetterBigDigit = "Z";
+      } else {
+        sectorLetterBigDigit = String.fromCharCode(sectorLetterBigDigit.charCodeAt() - 1);
+      }
+
+      sectorLetter = String.fromCharCode(sectorLetter.charCodeAt() + 26);
+    }
+
+    return `${sectorLetterBigDigit}${sectorLetter}${sectorNumber}`;
   }
 
   static drawGridline (ctx, positionX, positionY, horizontal, lineLength, lineStroke, lineColor) {
@@ -811,7 +847,7 @@ class Canvas {
         eachGridlineHoriz += 1) {
         for (let eachGridlineVert = 0; eachGridlineVert < gridlineVertCanvasList.length;
           eachGridlineVert += 1) {
-          ctx.fillText(Canvas.getSectorDesignation(gridlineVertWorldList[eachGridlineVert], gridlineHorizWorldList[eachGridlineHoriz]), gridlineVertCanvasList[eachGridlineVert] + 16, gridlineHorizCanvasList[eachGridlineHoriz] + 32);
+          ctx.fillText(Canvas.getSectorDesignation(gridlineVertWorldList[eachGridlineVert], gridlineHorizWorldList[eachGridlineHoriz], this.sectorSize), gridlineVertCanvasList[eachGridlineVert] + 16, gridlineHorizCanvasList[eachGridlineHoriz] + 32);
         }
       }
     }
@@ -1311,7 +1347,7 @@ function isUndefined (value) {
 }
 
 // Load log data, hide the dropzone div, and setup the time selector.
-function loadLog (data) {
+function loadLog (data, canvas) {
   log = new LogData(data);
 
   if (log.entries.length > 0) {
@@ -1321,49 +1357,44 @@ function loadLog (data) {
   }
 }
 
-function advanceTimeline (direction = 1) {
-  let timeValue = parseInt($("#time_selector").val(), 10);
-
-  // Advance the timeline by 1 second.
-  timeValue += direction;
-  $("#time_selector").val(timeValue);
-
-  // Update the canvas.
-  canvas.update();
-}
-
-// Programmatically advance the time selector.
-function autoPlay (isAutoplaying) {
-  // Advance the timeline by 1 second and update the canvas.
-  advanceTimeline();
-
-  // Update the infobox if there's a selected object. Otherwise, hide it.
-  if (typeof canvas._selectedObject !== "undefined" && canvas._selectedObject.type !== "No selection") {
-    canvas.updateSelectionInfobox(parseInt($("#time_selector").val(), 10));
-  } else {
-    canvas._infobox.hide();
-  }
-
-  // If we reach the end, stop autoplaying.
-  if (parseInt($("#time_selector").val(), 10) >= parseInt($("#time_selector").attr("max"), 10)) {
-    return !isAutoplaying;
-  }
-
-  // Otherwise, keep going.
-  return isAutoplaying;
-}
-
-// Format scenario time into MM:SS.
-function formatTime (time) {
-  if (time % 60 < 10) {
-    return `${Math.floor(time / 60)}:0${time % 60}`;
-  }
-
-  return `${Math.floor(time / 60)}:${time % 60}`;
-}
-
-// Main function.
 $().ready(function () {
+  // Main onReady function.
+
+  /*
+   * -------------------------------------------------------------------------------------------------------------------
+   * Data
+   * -------------------------------------------------------------------------------------------------------------------
+   */
+
+  // Initialize the interactive file selector.
+  const [filepicker] = $("#filepicker"),
+    // Define options for playbackUpdateInterval.
+    playbackUpdateOptions = [
+      1000,
+      500,
+      250,
+      100,
+      50,
+      25
+    ],
+    // Initialize the canvas.
+    canvas = new Canvas();
+
+  // Initialize the playback interval reference.
+  let loopAutoplay = 0,
+    // Initialize playback update interval in ms per frame.
+    playbackUpdateInterval = playbackUpdateOptions[3],
+    // Initialize the zoom timeout.
+    zoomTimeout = 0,
+    // Do not initiate playback on ready by default.
+    isAutoplaying = false;
+
+  /*
+   * -------------------------------------------------------------------------------------------------------------------
+   * Loading screen events
+   * -------------------------------------------------------------------------------------------------------------------
+   */
+
   // Listen from drag and drop events to load log files.
   document.addEventListener("dragover", function (event) {
     event.stopPropagation();
@@ -1382,30 +1413,14 @@ $().ready(function () {
       const reader = new FileReader();
 
       reader.onload = function (event2) {
-        loadLog(event2.target.result);
+        loadLog(event2.target.result, canvas);
       };
 
       reader.readAsText(file);
     }
   });
 
-  // Manage interactive file selector.
-  const filepicker = document.getElementById("filepicker"),
-    // Define options for playbackUpdateInterval.
-    playbackUpdateOptions = [
-      1000,
-      500,
-      250,
-      100,
-      50,
-      25
-    ];
-
-  // Initialize playback update interval in ms per frame.
-  let playbackUpdateInterval = playbackUpdateOptions[3],
-    zoomTimeout = 0,
-    isAutoplaying = false;
-
+  // If the interactive file selector is passed a file, load it.
   filepicker.addEventListener("change", function (event) {
     event.stopPropagation();
     event.preventDefault();
@@ -1414,17 +1429,13 @@ $().ready(function () {
       reader = new FileReader();
 
     if (file) {
-      reader.onload = function (e2) {
-        const contents = e2.target.result;
-        loadLog(contents);
+      reader.onload = function (event2) {
+        loadLog(event2.target.result, canvas);
       };
 
       reader.readAsText(file);
     }
   });
-
-  // Initialize canvas.
-  canvas = new Canvas();
 
   // Zoom bar.
   $("#zoom_selector").on("input change", function (/* event */) {
@@ -1460,6 +1471,44 @@ $().ready(function () {
       $("#zoom_out").removeClass("ee-button-active");
     });
 
+  /*
+   * -------------------------------------------------------------------------------------------------------------------
+   * Functions
+   * -------------------------------------------------------------------------------------------------------------------
+   */
+
+  function advanceTimeline (direction = 1) {
+    let timeValue = parseInt($("#time_selector").val(), 10);
+
+    // Advance the timeline by 1 second.
+    timeValue += direction;
+    $("#time_selector").val(timeValue);
+
+    // Update the canvas.
+    canvas.update();
+  }
+
+  // Programmatically advance the time selector.
+  function autoPlay () {
+    // Advance the timeline by 1 second and update the canvas.
+    advanceTimeline();
+
+    // Update the infobox if there's a selected object. Otherwise, hide it.
+    if (typeof canvas._selectedObject !== "undefined" && canvas._selectedObject.type !== "No selection") {
+      canvas.updateSelectionInfobox(parseInt($("#time_selector").val(), 10));
+    } else {
+      canvas._infobox.hide();
+    }
+
+    // If we reach the end, stop autoplaying.
+    if (parseInt($("#time_selector").val(), 10) >= parseInt($("#time_selector").attr("max"), 10)) {
+      return !isAutoplaying;
+    }
+
+    // Otherwise, keep going.
+    return isAutoplaying;
+  }
+
   function timeSelectorUpdated () {
     // Update the canvas.
     canvas.update();
@@ -1471,10 +1520,6 @@ $().ready(function () {
       canvas._infobox.hide();
     }
   }
-  // On an interval when autoplay is enabled, increment the time controller.
-  // eslint-disable-next-line no-unused-vars, one-var
-  let loopAutoplay = 0;
-  loopAutoplay = resetAutoplay(loopAutoplay);
 
   function resetAutoplay (autoplayLoop) {
     // Clear and reset the autoplay interval to change it.
@@ -1565,6 +1610,15 @@ $().ready(function () {
       }
     }
   }
+
+  /*
+   * -------------------------------------------------------------------------------------------------------------------
+   * Interactive events
+   * -------------------------------------------------------------------------------------------------------------------
+   */
+
+  // Reinitialize the playback interval.
+  loopAutoplay = resetAutoplay(loopAutoplay);
 
   // Update the canvas when the time selector is modified.
   $("#time_selector").on("input change", function (/* event */) {
