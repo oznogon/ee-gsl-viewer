@@ -151,12 +151,6 @@ $().ready(function () {
 
     // Update the canvas.
     canvas.update();
-  }
-
-  // Programmatically advance the time selector.
-  function autoPlay () {
-    // Advance the timeline by 1 second and update the canvas.
-    advanceTimeline();
 
     // Update the infobox if there's a selected object. Otherwise, hide it.
     if (typeof canvas._selectedObject !== "undefined" && canvas._selectedObject.type !== "No selection") {
@@ -164,6 +158,12 @@ $().ready(function () {
     } else {
       canvas._infobox.hide();
     }
+  }
+
+  // Programmatically advance the time selector.
+  function autoPlay () {
+    // Advance the timeline by 1 second and update the canvas.
+    advanceTimeline();
 
     // If we reach the end, stop autoplaying.
     if (parseInt($("#time_selector").val(), 10) >= parseInt($("#time_selector").attr("max"), 10)) {

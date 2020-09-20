@@ -261,13 +261,14 @@ class Canvas {
           `<span class="ee-faction ee-faction-${cssFaction}">${selectedObject.callsign || "No callsign"} (${selectedObject.faction || "No faction"})</span>`
         ],
         // ["faction", selectedObject.faction || "No faction"],
+        // ["internal id", selectedObject.id],
         [
           "type",
           ""
         ],
         [
-          "— Navigation",
-          ""
+          "Navigation",
+          "HEADER"
         ],
         [
           "position",
@@ -278,8 +279,8 @@ class Canvas {
           ""
         ],
         [
-          "— Defense",
-          ""
+          "Defense",
+          "HEADER"
         ],
         [
           "hull",
@@ -298,24 +299,46 @@ class Canvas {
     // Set the heading in infobox data.
     entryMap.set("heading", heading.toFixed(1));
 
-    // List each shield segment.
+    // Set each shield segment.
     if (Object.prototype.hasOwnProperty.call(selectedObject, "shields")) {
-      const {shields} = selectedObject;
-      for (let shield = 0; shield < shields.length; shield += 1) {
-        const currentShield = selectedObject.shields[shield],
-          maxShield = selectedObject.config.shields[shield];
+      const {shields} = selectedObject,
+        maxShields = selectedObject.config.shields;
 
-        entryMap.set(`shield ${shield + 1}`, `${Math.floor(currentShield)} / ${maxShield} (${((currentShield / maxShield) * 100.0).toFixed(1)}%)`);
+      switch (shields.length) {
+        case 1:
+          entryMap.set("shields", `${Math.floor(shields[0])} / ${maxShields[0]} (${((shields[0] / maxShields[0]) * 100.0).toFixed(1)}%)`);
+          break;
+        case 2:
+          entryMap.set("front shields", `${Math.floor(shields[0])} / ${maxShields[0]} (${((shields[0] / maxShields[0]) * 100.0).toFixed(1)}%)`);
+          entryMap.set("rear shields", `${Math.floor(shields[1])} / ${maxShields[1]} (${((shields[1] / maxShields[1]) * 100.0).toFixed(1)}%)`);
+          break;
+        case 3:
+          entryMap.set("front shields", `${Math.floor(shields[0])} / ${maxShields[0]} (${((shields[0] / maxShields[0]) * 100.0).toFixed(1)}%)`);
+          entryMap.set("starboard shields", `${Math.floor(shields[1])} / ${maxShields[1]} (${((shields[1] / maxShields[1]) * 100.0).toFixed(1)}%)`);
+          entryMap.set("port shields", `${Math.floor(shields[2])} / ${maxShields[2]} (${((shields[2] / maxShields[2]) * 100.0).toFixed(1)}%)`);
+          break;
+        case 4:
+          entryMap.set("front shields", `${Math.floor(shields[0])} / ${maxShields[0]} (${((shields[0] / maxShields[0]) * 100.0).toFixed(1)}%)`);
+          entryMap.set("starboard shields", `${Math.floor(shields[1])} / ${maxShields[1]} (${((shields[1] / maxShields[1]) * 100.0).toFixed(1)}%)`);
+          entryMap.set("rear shields", `${Math.floor(shields[2])} / ${maxShields[2]} (${((shields[2] / maxShields[2]) * 100.0).toFixed(1)}%)`);
+          entryMap.set("port shields", `${Math.floor(shields[3])} / ${maxShields[3]} (${((shields[3] / maxShields[3]) * 100.0).toFixed(1)}%)`);
+          break;
+        default:
+          console.error("ETOOMANYSHIELDS");
       }
     }
 
-    // List ship missile stocks.
+    // Initialize offense header.
+    entryMap.set("Offense", "");
+
     if (selectedObject.type === "PlayerSpaceship" || selectedObject.type === "CpuShip") {
+      // List ship missile stocks.
       if (Object.prototype.hasOwnProperty.call(selectedObject, "missiles")) {
         const currentMissiles = selectedObject.missiles,
           maxMissiles = selectedObject.config.missiles;
 
-        entryMap.set("— Offense", "");
+        entryMap.set("Offense", "HEADER");
+
         for (const missileType in currentMissiles) {
           if (Object.prototype.hasOwnProperty.call(currentMissiles, missileType)) {
             const currentMissileCount = currentMissiles[missileType],
@@ -327,7 +350,7 @@ class Canvas {
       }
     }
 
-    // Update type.
+    // Update ship type and flag if this is a player ship.
     switch (selectedObject.type) {
     case "PlayerSpaceship":
       entryMap.set("type", `${selectedObject.ship_type} (Player)`);
@@ -341,8 +364,8 @@ class Canvas {
     default:
     }
 
-    // Systems data.
-    entryMap.set("— Systems", "");
+    // List data on ship systems.
+    entryMap.set("Systems", "HEADER");
 
     switch (selectedObject.type) {
     case "PlayerSpaceship": {
@@ -372,7 +395,11 @@ class Canvas {
 
     // Populate infobox with object info.
     for (const row of entryMap) {
-      infoboxContents = infoboxContents.concat(`<tr class="ee-${row[0]}"><td class="ee-table-key">`, row.join("</td><td class=\"ee-table-value\">"), "</td>");
+      if (row[1] === "HEADER") {
+        infoboxContents = infoboxContents.concat(`<tr class="ee-infobox-header"><td colspan=2 class="ee-table-key">${row[0]}</td>`);
+      } else if (row[1] !== "") {
+        infoboxContents = infoboxContents.concat(`<tr class="ee-${row[0]}"><td class="ee-table-key">`, row.join("</td><td class=\"ee-table-value\">"), "</td>");
+      }
     }
 
     // Show and populate the infobox.
