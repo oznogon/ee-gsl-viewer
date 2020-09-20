@@ -1595,6 +1595,51 @@ $().ready(function () {
   Mousetrap.bind("+", () => canvas.zoomCamera(2));
   Mousetrap.bind("-", () => canvas.zoomCamera(-1));
   Mousetrap.bind("_", () => canvas.zoomCamera(-2));
+  // Pan the camera, with the amount scaled to the zoom level.
+  Mousetrap.bind(["w", "a", "s", "d",
+    "shift+w", "shift+a", "shift+s", "shift+d"], function (event, combo) {
+    // Set the camera position relative to its current world position.
+    let viewX = canvas._view.x,
+      viewY = canvas._view.y,
+      moveStep = 10 / canvas._zoomScale;
+
+    // Don't try to pan if the view is locked on a valid selection.
+    if (canvas.isViewLocked === false || Canvas.isSelectionValid(canvas._selectedObject) === false) {
+      // Move faster if shift is held down.
+      switch (combo) {
+      case "w":
+        viewY -= moveStep;
+        break;
+      case "a":
+        viewX -= moveStep;
+        break;
+      case "s":
+        viewY += moveStep;
+        break;
+      case "d":
+        viewX += moveStep;
+        break;
+      case "shift+w":
+        viewY -= 10 * moveStep;
+        break;
+      case "shift+a":
+        viewX -= 10 * moveStep;
+        break;
+      case "shift+s":
+        viewY += 10 * moveStep;
+        break;
+      case "shift+d":
+        viewX += 10 * moveStep;
+        break;
+      default:
+        console.error("Invalid input to wasd binding");
+      }
+
+      // Move the camera to the new world position and update the canvas.
+      canvas.pointCameraAt(viewX, viewY);
+      canvas.update();
+    }
+  });
   // Playback controls.
   Mousetrap.bind("space", () => toggleAutoplay());
   Mousetrap.bind("]", () => cycleAutoplaySpeed());
@@ -1604,46 +1649,4 @@ $().ready(function () {
   Mousetrap.bind("z", () => advanceTimeline(-1));
   Mousetrap.bind("shift+x", () => advanceTimeline(10));
   Mousetrap.bind("shift+z", () => advanceTimeline(-10));
-  // Pan the camera, with the amount scaled to the zoom level.
-  Mousetrap.bind(["w", "a", "s", "d",
-    "shift+w", "shift+a", "shift+s", "shift+d"], function (event, combo) {
-    // Set the camera position relative to its current world position.
-    let viewX = canvas._view.x,
-      viewY = canvas._view.y,
-      moveStep = 10 / canvas._zoomScale;
-
-    // Move faster if shift is held down.
-    switch (combo) {
-    case "w":
-      viewY -= moveStep;
-      break;
-    case "a":
-      viewX -= moveStep;
-      break;
-    case "s":
-      viewY += moveStep;
-      break;
-    case "d":
-      viewX += moveStep;
-      break;
-    case "shift+w":
-      viewY -= 10 * moveStep;
-      break;
-    case "shift+a":
-      viewX -= 10 * moveStep;
-      break;
-    case "shift+s":
-      viewY += 10 * moveStep;
-      break;
-    case "shift+d":
-      viewX += 10 * moveStep;
-      break;
-    default:
-      console.error("Invalid input to wasd binding");
-    }
-
-    // Move the camera to the new world position and update the canvas.
-    canvas.pointCameraAt(viewX, viewY);
-    canvas.update();
-  });
 });
