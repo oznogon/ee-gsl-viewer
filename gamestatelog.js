@@ -1321,20 +1321,25 @@ function loadLog (data) {
   }
 }
 
-// Programmatically advance the time selector.
-function autoPlay (isAutoplaying) {
+function advanceTimeline (direction = 1) {
   let timeValue = parseInt($("#time_selector").val(), 10);
 
-  // Advance the timeline by 1 second. TODO: Make adjustible.
-  timeValue += 1;
+  // Advance the timeline by 1 second.
+  timeValue += direction;
   $("#time_selector").val(timeValue);
 
   // Update the canvas.
   canvas.update();
+}
+
+// Programmatically advance the time selector.
+function autoPlay (isAutoplaying) {
+  // Advance the timeline by 1 second and update the canvas.
+  advanceTimeline();
 
   // Update the infobox if there's a selected object. Otherwise, hide it.
   if (typeof canvas._selectedObject !== "undefined" && canvas._selectedObject.type !== "No selection") {
-    canvas.updateSelectionInfobox(timeValue);
+    canvas.updateSelectionInfobox(parseInt($("#time_selector").val(), 10));
   } else {
     canvas._infobox.hide();
   }
@@ -1397,7 +1402,7 @@ $().ready(function () {
     ];
 
   // Initialize playback update interval in ms per frame.
-  let playbackUpdateInterval = playbackUpdateOptions[2],
+  let playbackUpdateInterval = playbackUpdateOptions[3],
     zoomTimeout = 0,
     isAutoplaying = false;
 
@@ -1420,21 +1425,6 @@ $().ready(function () {
 
   // Initialize canvas.
   canvas = new Canvas();
-
-  // Update the canvas when the time selector is modified.
-  $("#time_selector").on("input change", function (/* event */) {
-    const timeValue = $("#time_selector").val();
-
-    // Update the canvas.
-    canvas.update();
-
-    // Update the infobox if there's a selected object. Otherwise, hide it.
-    if (typeof canvas._selectedObject !== "undefined" && canvas._selectedObject.type !== "No selection") {
-      canvas.updateSelectionInfobox(timeValue);
-    } else {
-      canvas._infobox.hide();
-    }
-  });
 
   // Zoom bar.
   $("#zoom_selector").on("input change", function (/* event */) {
@@ -1470,23 +1460,21 @@ $().ready(function () {
       $("#zoom_out").removeClass("ee-button-active");
     });
 
-  $("#lock_view").on("click", function (/* event */) {
-    // If the view is locked on a valid selected object, toggle the button.
-    if (log !== null) {
-      canvas.isViewLocked = !canvas.isViewLocked;
+  function timeSelectorUpdated () {
+    // Update the canvas.
+    canvas.update();
 
-      if (canvas.isViewLocked === true) {
-        $("#lock_view").addClass("ee-button-active");
-
-        // If a valid object is selected when activating the button, move the camera.
-        if (Canvas.isSelectionValid(canvas._selectedObject) === true) {
-          canvas.update();
-        }
-      } else {
-        $("#lock_view").removeClass("ee-button-active");
-      }
+    // Update the infobox if there's a selected object. Otherwise, hide it.
+    if (typeof canvas._selectedObject !== "undefined" && canvas._selectedObject.type !== "No selection") {
+      canvas.updateSelectionInfobox($("#time_selector").val());
+    } else {
+      canvas._infobox.hide();
     }
-  });
+  }
+  // On an interval when autoplay is enabled, increment the time controller.
+  // eslint-disable-next-line no-unused-vars, one-var
+  let loopAutoplay = 0;
+  loopAutoplay = resetAutoplay(loopAutoplay);
 
   function resetAutoplay (autoplayLoop) {
     // Clear and reset the autoplay interval to change it.
@@ -1502,12 +1490,7 @@ $().ready(function () {
     }, playbackUpdateInterval);
   }
 
-  // On an interval when autoplay is enabled, increment the time controller.
-  // eslint-disable-next-line no-unused-vars, one-var
-  let loopAutoplay = 0;
-  loopAutoplay = resetAutoplay(loopAutoplay);
-
-  $("#autoplay").on("click", function (/* event */) {
+  function toggleAutoplay () {
     if (log !== null) {
       // Toggle autoplaying state.
       isAutoplaying = !isAutoplaying;
@@ -1521,10 +1504,9 @@ $().ready(function () {
         $("#autoplay").removeClass("ee-button-active");
       }
     }
-  });
+  }
 
-  // Cycle through autoplay speed options.
-  $("#autoplay_speed").on("click", function (/* event */) {
+  function cycleAutoplaySpeed () {
     for (let index = playbackUpdateOptions.length - 1; index >= 0; index -= 1) {
       // Loop through options to get the index of our current setting.
       if (playbackUpdateInterval === playbackUpdateOptions[index]) {
@@ -1549,10 +1531,9 @@ $().ready(function () {
 
     // Update button text.
     $("#autoplay_speed").text(`${Math.floor(1000 / playbackUpdateInterval)}x`);
-  });
+  }
 
-  // Track whether to show callsigns.
-  $("#callsigns").on("click", function (/* event */) {
+  function toggleCallsigns () {
     // If a log's loaded, toggle callsigns and update the canvas.
     if (log !== null) {
       canvas.showCallsigns = !canvas.showCallsigns;
@@ -1565,5 +1546,104 @@ $().ready(function () {
         $("#callsigns").removeClass("ee-button-active");
       }
     }
+  }
+
+  function toggleViewLock () {
+    // If the view is locked on a valid selected object, toggle the button.
+    if (log !== null) {
+      canvas.isViewLocked = !canvas.isViewLocked;
+
+      if (canvas.isViewLocked === true) {
+        $("#lock_view").addClass("ee-button-active");
+
+        // If a valid object is selected when activating the button, move the camera.
+        if (Canvas.isSelectionValid(canvas._selectedObject) === true) {
+          canvas.update();
+        }
+      } else {
+        $("#lock_view").removeClass("ee-button-active");
+      }
+    }
+  }
+
+  // Update the canvas when the time selector is modified.
+  $("#time_selector").on("input change", function (/* event */) {
+    timeSelectorUpdated();
+  });
+
+  $("#lock_view").on("click", function (/* event */) {
+    toggleViewLock();
+  });
+
+  $("#autoplay").on("click", function (/* event */) {
+    toggleAutoplay();
+  });
+
+  // Cycle through autoplay speed options.
+  $("#autoplay_speed").on("click", function (/* event */) {
+    cycleAutoplaySpeed();
+  });
+
+  // Toggle callsign display.
+  $("#callsigns").on("click", function (/* event */) {
+    toggleCallsigns();
+  });
+
+  // Handle keyboard shortcuts.
+  // Zoom in and out. Double the rate if holding shift.
+  Mousetrap.bind("=", () => canvas.zoomCamera(1));
+  Mousetrap.bind("+", () => canvas.zoomCamera(2));
+  Mousetrap.bind("-", () => canvas.zoomCamera(-1));
+  Mousetrap.bind("_", () => canvas.zoomCamera(-2));
+  // Playback controls.
+  Mousetrap.bind("space", () => toggleAutoplay());
+  Mousetrap.bind("]", () => cycleAutoplaySpeed());
+  Mousetrap.bind("c", () => toggleCallsigns());
+  Mousetrap.bind("l", () => toggleViewLock());
+  Mousetrap.bind("x", () => advanceTimeline(1));
+  Mousetrap.bind("z", () => advanceTimeline(-1));
+  Mousetrap.bind("shift+x", () => advanceTimeline(10));
+  Mousetrap.bind("shift+z", () => advanceTimeline(-10));
+  // Pan the camera, with the amount scaled to the zoom level.
+  Mousetrap.bind(["w", "a", "s", "d",
+    "shift+w", "shift+a", "shift+s", "shift+d"], function (event, combo) {
+    // Set the camera position relative to its current world position.
+    let viewX = canvas._view.x,
+      viewY = canvas._view.y,
+      moveStep = 10 / canvas._zoomScale;
+
+    // Move faster if shift is held down.
+    switch (combo) {
+    case "w":
+      viewY -= moveStep;
+      break;
+    case "a":
+      viewX -= moveStep;
+      break;
+    case "s":
+      viewY += moveStep;
+      break;
+    case "d":
+      viewX += moveStep;
+      break;
+    case "shift+w":
+      viewY -= 10 * moveStep;
+      break;
+    case "shift+a":
+      viewX -= 10 * moveStep;
+      break;
+    case "shift+s":
+      viewY += 10 * moveStep;
+      break;
+    case "shift+d":
+      viewX += 10 * moveStep;
+      break;
+    default:
+      console.error("Invalid input to wasd binding");
+    }
+
+    // Move the camera to the new world position and update the canvas.
+    canvas.pointCameraAt(viewX, viewY);
+    canvas.update();
   });
 });
