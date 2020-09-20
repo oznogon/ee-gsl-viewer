@@ -535,64 +535,107 @@ class Canvas {
           // Initialize RNG variable for nebula images.
           imageRNG = alea(`${entry.id}`);
 
-        if (entry.type === "Nebula") {
+        switch (entry.type) {
+        case "Nebula": {
           Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, halfTransparent, size5U / 2, this.nebulaImages[Math.floor(imageRNG() * 3)], rotation, true);
-        } else if (entry.type === "BlackHole") {
+        }
+        break;
+        case "BlackHole": {
           Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, opaque, size5U / 2, this.blackHoleImage, rotation, true);
-        } else if (entry.type === "WormHole") {
+        }
+        break;
+        case "WormHole": {
           Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, opaque, size5U / 2, this.wormHoleImages[Math.floor(imageRNG() * 3)], rotation, true);
           // Canvas.drawCircle(ctxBg, positionX, positionY, this._zoomScale, "#800080", mostlyTransparent, size5U);
-        } else if (entry.type === "Mine") {
+        }
+        break;
+        case "Mine": {
           // Draw mine radius.
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#808080", mostlyTransparent, size05U);
 
           // Draw mine location.
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#FFFFFF", opaque, sizeMin);
-        } else if (entry.type === "PlayerSpaceship") {
+        }
+        break;
+        case "PlayerSpaceship": {
           // Draw the ship on the foreground canvas, and its hit shape on the hit canvas.
           this.drawShip(ctx, positionX, positionY, entry);
           Canvas.drawRectangle(ctxHit, positionX, positionY, this._zoomScale, Canvas.idToHex(entry.id), 1.0, 8.0, 1.33);
-        } else if (entry.type === "CpuShip") {
+        }
+        break;
+        case "CpuShip": {
           // Draw the ship on the foreground canvas, and its hit shape on the hit canvas.
           this.drawShip(ctx, positionX, positionY, entry);
           Canvas.drawRectangle(ctxHit, positionX, positionY, this._zoomScale, Canvas.idToHex(entry.id), 1.0, 8.0, 1.33);
-        } else if (entry.type === "WarpJammer") {
+        }
+        break;
+        case "WarpJammer": {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#C89664", opaque, sizeJammer);
-        } else if (entry.type === "SupplyDrop") {
+        }
+        break;
+        case "SupplyDrop": {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#00FFFF", opaque, sizeCollectible);
-        } else if (entry.type === "SpaceStation") {
+        }
+        break;
+        case "SpaceStation": {
           // Draw the station on the foreground canvas, and its hit shape on the hit canvas.
           this.drawStation(ctx, positionX, positionY, entry);
           Canvas.drawRectangle(ctxHit, positionX, positionY, this._zoomScale, Canvas.idToHex(entry.id), 1.0, 18.0);
-        } else if (entry.type === "Asteroid") {
+        }
+        break;
+        case "Asteroid": {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#FFC864", opaque, sizeMin);
-        } else if (entry.type === "VisualAsteroid") {
+        }
+        break;
+        case "VisualAsteroid": {
           Canvas.drawCircle(ctxBg, positionX, positionY, this._zoomScale, "#FFC864", mostlyTransparent, sizeMin);
-        } else if (entry.type === "Artifact") {
+        }
+        break;
+        case "Artifact": {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#FFFFFF", opaque, sizeCollectible);
-        } else if (entry.type === "Planet") {
+        }
+        break;
+        case "Planet": {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#0000AA", opaque, Math.floor(entry.planet_radius / 20));
-        } else if (entry.type === "ScanProbe") {
+        }
+        break;
+        case "ScanProbe": {
           // Draw probe scan radius.
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#60C080", nearlyTransparent, size5U);
 
           // Draw probe location.
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#60C080", opaque, sizeMin);
-        } else if (entry.type === "Nuke") {
+        }
+        break;
+        case "Nuke": {
           Canvas.drawShapeWithRotation("delta", ctx, positionX, positionY, this._zoomScale, "#FF4400", opaque, sizeMin, rotation);
-        } else if (entry.type === "EMPMissile") {
+        }
+        break;
+        case "EMPMissile": {
           Canvas.drawShapeWithRotation("delta", ctx, positionX, positionY, this._zoomScale, "#00FFFF", opaque, sizeMin, rotation);
-        } else if (entry.type === "HomingMissile") {
+        }
+        break;
+        case "HomingMissile": {
           Canvas.drawShapeWithRotation("delta", ctx, positionX, positionY, this._zoomScale, "#FFAA00", opaque, sizeMin, rotation);
-        } else if (entry.type === "HVLI") {
+        }
+        break;
+        case "HVLI": {
           Canvas.drawShapeWithRotation("delta", ctx, positionX, positionY, this._zoomScale, "#AAAAAA", opaque, sizeMin, rotation);
-        } else if (entry.type === "BeamEffect") {
+        }
+        break;
+        case "BeamEffect": {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#AA6600", halfTransparent, sizeBeamHit);
-        } else if (entry.type === "ExplosionEffect") {
+        }
+        break;
+        case "ExplosionEffect": {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#FFFF00", halfTransparent, sizeExplosion);
-        } else if (entry.type === "ElectricExplosionEffect") {
+        }
+        break;
+        case "ElectricExplosionEffect": {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#00FFFF", halfTransparent, sizeExplosion);
-        } else {
+        }
+        break;
+        default:
           // If an object is an unknown type, log a debug message and display it in fuscia.
           console.error(`Unknown object type: ${entry.type}`);
           Canvas.drawSquare(ctx, positionX, positionY, this._zoomScale, "#FF00FF", opaque, sizeMin);
