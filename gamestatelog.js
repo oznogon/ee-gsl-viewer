@@ -74,7 +74,7 @@ $().ready(function () {
 
     const {files} = event.dataTransfer;
 
-    for (let fileIndex = 0, file; file = files[fileIndex]; fileIndex += 1) {
+    for (let fileIndex = 0, file; (file = files[fileIndex]) !== null; fileIndex += 1) {
       const reader = new FileReader();
 
       reader.onload = function (event2) {

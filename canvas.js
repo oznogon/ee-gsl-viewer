@@ -160,6 +160,7 @@ class Canvas {
   // The hell is wrong with you, javascript? https://www.codereadability.com/how-to-check-for-undefined-in-javascript/
   static isUndefined (value) {
     // Obtain "undefined" value that's guaranteed to not have been re-assigned.
+    // eslint-disable-next-line no-shadow-restricted-names
     const undefined = void (0);
     return value === undefined;
   }
@@ -336,9 +337,11 @@ class Canvas {
     entryMap.set("— Systems", "");
 
     switch (selectedObject.type) {
-    case "PlayerSpaceship":
+    case "PlayerSpaceship": {
       entryMap.set("energy", `${Math.floor(selectedObject.energy_level)}`);
-    case "CpuShip":
+    }
+    // break omitted
+    case "CpuShip": {
       const {systems} = selectedObject;
 
       for (const [systemName, system] of Object.entries(systems)) {
@@ -355,6 +358,7 @@ class Canvas {
         }
       }
       break;
+    }
     default:
     }
 
@@ -1199,4 +1203,3 @@ class Canvas {
     ctx.restore();
   }
 }
-
