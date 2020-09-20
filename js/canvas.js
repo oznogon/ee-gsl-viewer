@@ -617,12 +617,8 @@ class Canvas {
       sectorNumber = 5 + Math.floor(positionX / sectorSize);
 
     // If the sector number would be out of range, loop it around by 100.
-    while (sectorNumber < 0) {
+    if (sectorNumber < 0) {
       sectorNumber += 100;
-    }
-
-    while (sectorNumber > 100) {
-      sectorNumber -= 100;
     }
 
     // If the sector letter would be out of range, add a second digit and loop back to "A".
