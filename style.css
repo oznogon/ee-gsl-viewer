@@ -358,6 +358,7 @@ input[type=range]:focus::-ms-fill-upper {
 }
 
 #infobox-content .ee-table-key {
+  font-family: 'Bebas Neue Book', 'Impact', 'Arial Narrow', sans-serif;
   font-weight: 300;
   padding-right: 10px;
   text-align: right;
@@ -384,11 +385,11 @@ input[type=range]:focus::-ms-fill-upper {
 #zoom_in,
 #zoom_out,
 #lock_view {
+  height: 38px;
   padding: 8px 0;
   position: absolute;
   right: 20px;
   width: 40px;
-  height: 38px;
 }
 
 #zoom_in {
@@ -400,11 +401,21 @@ input[type=range]:focus::-ms-fill-upper {
 }
 
 #lock_view {
-  top: 255px;
+  font-family: 'EmptyEpsilon Icons';
   line-height: 0.8;
-  font-family: "EmptyEpsilon Icons";
+  top: 255px;
 }
 
 #autoplay_speed {
   width: 75px;
+}
+
+#infobox-content .ee-infobox-header {
+  background-color: #202040;
+}
+
+#infobox-content .ee-infobox-header td {
+  text-align: center;
+  font-family: 'Bebas Neue Bold', 'Impact', 'Arial Narrow', sans-serif;
+  font-weight: 700;
 }
