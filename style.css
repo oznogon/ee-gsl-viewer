@@ -410,12 +410,22 @@ input[type=range]:focus::-ms-fill-upper {
   width: 75px;
 }
 
-#infobox-content .ee-infobox-header {
-  background-color: #202040;
-}
-
-#infobox-content .ee-infobox-header td {
+.ee-infobox-header {
   text-align: center;
   font-family: 'Bebas Neue Bold', 'Impact', 'Arial Narrow', sans-serif;
   font-weight: 700;
+}
+
+.ee-infobox-header-h1 {
+  background-color: #202040;
+}
+
+.ee-infobox-header-h2 {
+  font-family: 'Bebas Neue Regular', 'Impact', 'Arial Narrow', sans-serif;
+  font-weight: 400;
+}
+
+.ee-infobox-header-h3 {
+  font-family: 'Bebas Neue Book', 'Impact', 'Arial Narrow', sans-serif;
+  font-weight: 300;
 }
