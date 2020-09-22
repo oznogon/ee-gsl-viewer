@@ -329,12 +329,12 @@ class Canvas {
 
     if ("config" in selectedObject) {
       if ("turn_speed" in selectedObject.config) {
-        objectOutput.push({"key": "Rotation rate", "value": `${(selectedObject.config.turn_speed).toFixed(1)}°/sec.`});
+        objectOutput.push({"key": "Rotation rate", "value": `${Math.max(0, ((selectedObject.systems["Maneuvering"]["power_level"] * selectedObject.systems["Maneuvering"]["health"]) * selectedObject.config.turn_speed).toFixed(1))}°/sec.`});
       }
 
       if ("impulse_speed" in selectedObject.config) {
         objectOutput.push({"key": "h2", "value": "Impulse Propulsion"});
-        objectOutput.push({"key": "Speed", "value": `${(selectedObject.config.impulse_speed * selectedObject.output.impulse).toFixed(1)} (max ${selectedObject.config.impulse_speed})`});
+        objectOutput.push({"key": "Speed", "value": `${Math.max(0, ((selectedObject.systems["Impulse Engines"]["power_level"] * selectedObject.systems["Impulse Engines"]["health"]) * (selectedObject.config.impulse_speed * selectedObject.output.impulse)).toFixed(1))} (max ${Math.max(0, ((selectedObject.systems["Impulse Engines"]["power_level"] * selectedObject.systems["Impulse Engines"]["health"]) * selectedObject.config.impulse_speed).toFixed(1))})`});
         objectOutput.push({"key": "Acceleration", "value": `${(selectedObject.config.impulse_acceleration)}`});
         objectOutput.push({"key": "Throttle", "value": `${Math.floor(selectedObject.output.impulse * 100)}% (target ${Math.floor(selectedObject.input.impulse * 100)}%)`});
       }
@@ -385,7 +385,7 @@ class Canvas {
 
     if ("hull" in selectedObject) {
       objectOutput.push({"key": "h1", "value": "Defenses"});
-      objectOutput.push({"key": "Hull", "value": `${selectedObject.hull} (${Math.floor((selectedObject.hull / selectedObject.config.hull) * 100)}%)`});
+      objectOutput.push({"key": "Hull", "value": `${Math.floor(selectedObject.hull)} (${Math.floor((selectedObject.hull / selectedObject.config.hull) * 100)}%)`});
     }
 
     // (If more than 0 shields)
