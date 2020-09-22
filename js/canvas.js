@@ -279,17 +279,10 @@ class Canvas {
 
     const objectOutput = [];
 
-    // Get the selectedObject at this point in time.
-    // For each property in selectedObject, add it to the output array in the right section & order.
-    // (Why not a map? Because we need order but can't have unique keys, some will be dupes or need special handling.)
-    // If a property's value is itself an object/array, make it a section
-
-    // Add heading.
     // # Callsign (Faction)
     objectOutput.push({"key": "h1", "value": `${selectedObject.callsign} (${selectedObject.faction})`});
 
     // Add ship type. Flag if it's a player ship.
-    // Type: ship_type (If isPlayer, (Player))
     switch (selectedObject.type) {
       case "PlayerSpaceship":
         objectOutput.push({"key": "Type", "value": `${selectedObject.ship_type} (Player)`});
@@ -304,13 +297,11 @@ class Canvas {
         objectOutput.push({"key": "Type", "value": selectedObject.type});
     }
 
-    // Position: position[0], position[1]
     objectOutput.push({"key": "Position", "value": `${selectedObject.position[0].toFixed(1)}, ${selectedObject.position[1].toFixed(1)}`});
 
     // # Maneuvering
     objectOutput.push({"key": "h1", "value": "Maneuvering"});
 
-    // Heading: heading (-> input.rotation + 90, config.turn_speed)
     if ("input" in selectedObject) {
       objectOutput.push({"key": "Heading", "value": `${heading.toFixed(1)}° (plotted ${Canvas.normalizeHeading(selectedObject.input.rotation + 90).toFixed(1)}°)`});
     } else {
@@ -322,10 +313,6 @@ class Canvas {
     }
 
     if ("impulse_speed" in selectedObject.config) {
-      // Impulse speed: config.impulse_speed * output.impulse,
-      // throttle `input.impulse * 100`%
-      // target `output.impulse * 100`%,
-      // accel `config.impulse_acceleration`
       objectOutput.push({"key": "h2", "value": "Impulse Propulsion"});
       objectOutput.push({"key": "Speed", "value": `${(selectedObject.config.impulse_speed * selectedObject.output.impulse).toFixed(1)} (max ${selectedObject.config.impulse_speed})`});
       objectOutput.push({"key": "Acceleration", "value": `${(selectedObject.config.impulse_acceleration)}`});
@@ -333,10 +320,6 @@ class Canvas {
     }
 
     if ("combat_maneuver_boost" in selectedObject.config) {
-      // Combat maneuvering:
-      // Charge output.combat_maneuver_charge,
-      // boost `output.combat_maneuver_boost * 100`%,
-      // strafe `output.combat_maneuver_strafe * 100`%
       objectOutput.push({"key": "h2", "value": "Combat Maneuvering"});
       objectOutput.push({"key": "Charge", "value": `${Math.floor(selectedObject.output.combat_maneuver_charge * 100)}% available`});
       objectOutput.push({"key": "Boost", "value": `${Math.floor(selectedObject.output.combat_maneuver_boost * 100)}% engaged`});
@@ -344,7 +327,6 @@ class Canvas {
     }
 
     if ("jumpdrive" in selectedObject.config) {
-      // Jump drive: output.jump.charge (output.jump.??? if jump in progress)
       objectOutput.push({"key": "h2", "value": "Jump Drive"});
 
       // charge is only in the object if we're not currently jumping
@@ -377,18 +359,16 @@ class Canvas {
      * }
      */
 
-    // # Defense
-    objectOutput.push({"key": "h1", "value": "Defense"});
+    objectOutput.push({"key": "h1", "value": "Defenses"});
 
     // Hull: hull (`hull / config.hull`%)
     objectOutput.push({"key": "Hull", "value": `${selectedObject.hull} (${Math.floor((selectedObject.hull / selectedObject.config.hull) * 100)}%)`});
 
     // (If more than 0 shields)
     if ("shields" in selectedObject) {
-      objectOutput.push({"key": "h2", "value": "Shields"});
       // Shield frequency: shield_frequency -> convert int to hz equivalent
       // return string(400 + (frequency * 20)) + "THz";
-      objectOutput.push({"key": "Shields frequency", "value": Canvas.frequencyToString(selectedObject.shield_frequency)});
+      objectOutput.push({"key": "Shield frequency", "value": Canvas.frequencyToString(selectedObject.shield_frequency)});
 
       switch (selectedObject.shields.length) {
         case 1:
@@ -401,7 +381,7 @@ class Canvas {
         case 3:
           objectOutput.push({"key": "Fore shields", "value": `${Math.floor(selectedObject.shields[0])} (${Math.floor(selectedObject.shields[0] / selectedObject.config.shields[0] * 100)}%)`});
           objectOutput.push({"key": "Starboard shields", "value": `${Math.floor(selectedObject.shields[1])} (${Math.floor(selectedObject.shields[1] / selectedObject.config.shields[1] * 100)}%)`});
-          objectOutput.push({"key": "Port shields", "value": `${Math.floor(electedObject.shields[2])} (${Math.floor(selectedObject.shields[2] / selectedObject.config.shields[2] * 100)}%)`});
+          objectOutput.push({"key": "Port shields", "value": `${Math.floor(selectedObject.shields[2])} (${Math.floor(selectedObject.shields[2] / selectedObject.config.shields[2] * 100)}%)`});
           break;
         case 4:
           objectOutput.push({"key": "Fore shields", "value": `${Math.floor(selectedObject.shields[0])} (${Math.floor(selectedObject.shields[0] / selectedObject.config.shields[0] * 100)}%)`});
@@ -416,201 +396,129 @@ class Canvas {
       }
     }
 
-    if ("tubes" in selectedObject || "beams" in selectedObject) {
-      // # Beams
-      if ("beams" in selectedObject.config) {
-        objectOutput.push({"key": "h1", "value": "Beam Weapons"});
-        // Beam frequency: beam_frequency -> convert int to hz equivalent
-        // 400 + (frequency * 20)) + "THz";
-        objectOutput.push({"key": "Beam frequency", "value": Canvas.frequencyToString(selectedObject.beam_frequency)});
-        /* For beam in config.beams[]
-        ## Beam n: Direction beam.direction, / arc beam.arc / `beam.range / 1000`U range
-        Damage: beam.damage (`beam.damage / beam.cycle_time` per second)
-        Turret: Direction beam.turret_direction / arc beam.turret_arc */
+    // # Beams
+    if ("beams" in selectedObject.config) {
+      objectOutput.push({"key": "h1", "value": "Beam Weapons"});
+      // Beam frequency: beam_frequency -> convert int to hz equivalent
+      // 400 + (frequency * 20)) + "THz";
+      objectOutput.push({"key": "Beam frequency", "value": Canvas.frequencyToString(selectedObject.beam_frequency)});
 
-        for (let index = 0; index < selectedObject.config.beams.length; index += 1) {
-          const beam = selectedObject.config.beams[index];
+      for (let index = 0; index < selectedObject.config.beams.length; index += 1) {
+        const beam = selectedObject.config.beams[index];
 
-          // Some ships have a 0-arc beam?
-          if (beam.arc > 0) {
-            objectOutput.push({"key": "h3", "value": `Beam Weapon ${index + 1}`});
-            objectOutput.push({"key": "Bearing", "value": `${Canvas.normalizeHeading(beam.direction)}°`});
-            objectOutput.push({"key": "Arc", "value": `${beam.arc}°`});
-            objectOutput.push({"key": "Range", "value": `${(beam.range / 1000).toFixed(1)}U`});
-            objectOutput.push({"key": "Damage", "value": `${beam.damage} (${(beam.damage / beam.cycle_time).toFixed(1)}/sec.)`});
-            objectOutput.push({"key": "Cycle time", "value": `${beam.cycle_time.toFixed(1)} sec.`});
+        // Some ships have a 0-arc beam?
+        if (beam.arc > 0) {
+          objectOutput.push({"key": "h2", "value": `Beam Weapon ${index + 1}`});
+          objectOutput.push({"key": "Bearing", "value": `${Canvas.normalizeHeading(beam.direction)}°`});
+          objectOutput.push({"key": "Arc", "value": `${beam.arc}°`});
+          objectOutput.push({"key": "Range", "value": `${(beam.range / 1000).toFixed(1)}U`});
+          objectOutput.push({"key": "Damage", "value": `${beam.damage} (${(beam.damage / beam.cycle_time).toFixed(1)}/sec.)`});
+          objectOutput.push({"key": "Cycle time", "value": `${beam.cycle_time.toFixed(1)} sec.`});
 
-            if ("turret_arc" in beam && beam.turret_arc > 0) {
-              objectOutput.push({"key": "Turret Bearing", "value": `${Canvas.normalizeHeading(beam.turret_direction)}°`});
-              objectOutput.push({"key": "Turret Arc", "value": `${beam.turret_arc}°`});
-            }
-          }
-        }
-      }
-
-      if ("tubes" in selectedObject || "missiles" in selectedObject) {
-        // # Missiles and mines
-        objectOutput.push({"key": "h1", "value": "Missiles and Mines"});
-
-        // Enforce the same missile order as the game UI.
-        if ("missiles" in selectedObject) {
-          if ("Homing" in selectedObject.config.missiles) {
-            // If there are 0 missiles of a type in stock, the value isn't reported at all.
-            if ("Homing" in selectedObject.missiles) {
-              objectOutput.push({"key": "Homing", "value": `${selectedObject.missiles.Homing} / ${selectedObject.config.missiles.Homing}`});
-            } else {
-              objectOutput.push({"key": "Homing", "value": `0 / ${selectedObject.config.missiles.Homing}`});
-            }
-          }
-
-          if ("Nuke" in selectedObject.config.missiles) {
-            if ("Nuke" in selectedObject.missiles) {
-              objectOutput.push({"key": "Nuke", "value": `${selectedObject.missiles.Nuke} / ${selectedObject.config.missiles.Nuke}`});
-            } else {
-              objectOutput.push({"key": "Nuke", "value": `0 / ${selectedObject.config.missiles.Nuke}`});
-            }
-          }
-
-          if ("EMP" in selectedObject.config.missiles) {
-            if ("EMP" in selectedObject.missiles) {
-              objectOutput.push({"key": "EMP", "value": `${selectedObject.missiles.EMP} / ${selectedObject.config.missiles.EMP}`});
-            } else {
-              objectOutput.push({"key": "EMP", "value": `0 / ${selectedObject.config.missiles.EMP}`});
-            }
-          }
-
-          if ("HVLI" in selectedObject.config.missiles) {
-            if ("HVLI" in selectedObject.missiles) {
-              objectOutput.push({"key": "HVLI", "value": `${selectedObject.missiles.HVLI} / ${selectedObject.config.missiles.HVLI}`});
-            } else {
-              objectOutput.push({"key": "HVLI", "value": `0 / ${selectedObject.config.missiles.HVLI}`});
-            }
-          }
-
-          if ("Mine" in selectedObject.config.missiles) {
-            if ("Mine" in selectedObject.missiles) {
-              objectOutput.push({"key": "Mine", "value": `${selectedObject.missiles.Mine} / ${selectedObject.config.missiles.Mine}`});
-            } else {
-              objectOutput.push({"key": "Mine", "value": `0 / ${selectedObject.config.missiles.Mine}`});
-            }
-          }
-        }
-
-        // Display info about the tubes.
-        if ("tubes" in selectedObject) {
-          for (let index = 0; index < selectedObject.config.tubes.length; index += 1) {
-            const tube = selectedObject.config.tubes[index],
-              tubeState = selectedObject.tubes[index];
-
-            objectOutput.push({"key": "h3", "value": `Weapon Tube ${index + 1}`});
-
-            if ("type" in tubeState) {
-              objectOutput.push({"key": "Missile Type", "value": tubeState.type});
-            } else {
-              objectOutput.push({"key": "Missile Type", "value": "None"});
-            }
-
-            // If the tube's doing something, report it. If it's in progress, report the completion %.
-            if ("state" in tubeState) {
-              if ("progress" in tubeState) {
-                objectOutput.push({"key": "State", "value": `${tubeState.state} (${Math.floor(tubeState.progress * 100)}%, ${(tube.load_time - (tubeState.progress * tube.load_time)).toFixed(1)} sec.)`});
-              } else {
-                objectOutput.push({"key": "State", "value": tubeState.state});
-              }
-            } else {
-              objectOutput.push({"key": "State", "value": "Empty"});
-            }
-
-            objectOutput.push({"key": "Bearing", "value": `${Canvas.normalizeHeading(tube.direction)}°`});
-            objectOutput.push({"key": "Load time", "value": `${tube.load_time} sec.`});
+          if ("turret_arc" in beam && beam.turret_arc > 0) {
+            objectOutput.push({"key": "Turret Bearing", "value": `${Canvas.normalizeHeading(beam.turret_direction)}°`});
+            objectOutput.push({"key": "Turret Arc", "value": `${beam.turret_arc}°`});
           }
         }
       }
     }
 
-    /*
-    # Systems
+    // Enforce the same missile order as the game UI.
+    if ("missiles" in selectedObject) {
+      objectOutput.push({"key": "h1", "value": "Missiles and Mines"});
 
-    Energy: energy_level
+      if ("Homing" in selectedObject.config.missiles) {
+        // If there are 0 missiles of a type in stock, the value isn't reported at all.
+        if ("Homing" in selectedObject.missiles) {
+          objectOutput.push({"key": "Homing", "value": `${selectedObject.missiles.Homing} / ${selectedObject.config.missiles.Homing}`});
+        } else {
+          objectOutput.push({"key": "Homing", "value": `0 / ${selectedObject.config.missiles.Homing}`});
+        }
+      }
 
-    For system in systems{}
+      if ("Nuke" in selectedObject.config.missiles) {
+        if ("Nuke" in selectedObject.missiles) {
+          objectOutput.push({"key": "Nuke", "value": `${selectedObject.missiles.Nuke} / ${selectedObject.config.missiles.Nuke}`});
+        } else {
+          objectOutput.push({"key": "Nuke", "value": `0 / ${selectedObject.config.missiles.Nuke}`});
+        }
+      }
 
-      ## key: Health max(0, `key.health * 100`)% (If health < 0, (Damaged min(0, `key.health * 100`)%)))
+      if ("EMP" in selectedObject.config.missiles) {
+        if ("EMP" in selectedObject.missiles) {
+          objectOutput.push({"key": "EMP", "value": `${selectedObject.missiles.EMP} / ${selectedObject.config.missiles.EMP}`});
+        } else {
+          objectOutput.push({"key": "EMP", "value": `0 / ${selectedObject.config.missiles.EMP}`});
+        }
+      }
 
-      (If isPlayer)
+      if ("HVLI" in selectedObject.config.missiles) {
+        if ("HVLI" in selectedObject.missiles) {
+          objectOutput.push({"key": "HVLI", "value": `${selectedObject.missiles.HVLI} / ${selectedObject.config.missiles.HVLI}`});
+        } else {
+          objectOutput.push({"key": "HVLI", "value": `0 / ${selectedObject.config.missiles.HVLI}`});
+        }
+      }
 
-        Power: `power_level * 100`% (request `power_request * 100`%)
-        Heat: `heat * 100`%
-        Coolant: `coolant_level * 100`% (request `coolant_request * 100`%)
-
-
-
-    // Initialize offense header.
-    entryMap.set("Offense", "");
-
-    if (selectedObject.type === "PlayerSpaceship" || selectedObject.type === "CpuShip") {
-      // List ship missile stocks.
-      if (Object.prototype.hasOwnProperty.call(selectedObject, "missiles")) {
-        const currentMissiles = selectedObject.missiles,
-          maxMissiles = selectedObject.config.missiles;
-
-        entryMap.set("Offense", "HEADER");
-
-        for (const missileType in currentMissiles) {
-          if (Object.prototype.hasOwnProperty.call(currentMissiles, missileType)) {
-            const currentMissileCount = currentMissiles[missileType],
-              maxMissileCount = maxMissiles[missileType];
-
-            entryMap.set(missileType, `${currentMissileCount} / ${maxMissileCount} (${((currentMissileCount / maxMissileCount) * 100.0).toFixed(1)}%)`);
-          }
+      if ("Mine" in selectedObject.config.missiles) {
+        if ("Mine" in selectedObject.missiles) {
+          objectOutput.push({"key": "Mine", "value": `${selectedObject.missiles.Mine} / ${selectedObject.config.missiles.Mine}`});
+        } else {
+          objectOutput.push({"key": "Mine", "value": `0 / ${selectedObject.config.missiles.Mine}`});
         }
       }
     }
 
-    // Update ship type and flag if this is a player ship.
-    switch (selectedObject.type) {
-    case "PlayerSpaceship":
-      entryMap.set("type", `${selectedObject.ship_type} (Player)`);
-      break;
-    case "CpuShip":
-      entryMap.set("type", `${selectedObject.ship_type}`);
-      break;
-    case "SpaceStation":
-      entryMap.set("type", `${selectedObject.station_type}`);
-      break;
-    default:
-    }
+    // Display info about the tubes.
+    if ("tubes" in selectedObject) {
+      for (let index = 0; index < selectedObject.config.tubes.length; index += 1) {
+        const tube = selectedObject.config.tubes[index],
+          tubeState = selectedObject.tubes[index];
 
-    // List data on ship systems.
-    entryMap.set("Systems", "HEADER");
+        objectOutput.push({"key": "h2", "value": `Weapon Tube ${index + 1}`});
 
-    switch (selectedObject.type) {
-    case "PlayerSpaceship": {
-      entryMap.set("energy", `${Math.floor(selectedObject.energy_level)}`);
-    }
-    // break omitted
-    case "CpuShip": {
-      const {systems} = selectedObject;
+        if ("type" in tubeState) {
+          objectOutput.push({"key": "Missile Type", "value": tubeState.type});
+        } else {
+          objectOutput.push({"key": "Missile Type", "value": "None"});
+        }
 
-      for (const [systemName, system] of Object.entries(systems)) {
-        entryMap.set(systemName, "");
-
-        for (const [stateName, stateValue] of Object.entries(system)) {
-          const statePercent = Math.floor(stateValue * 100.0);
-
-          if (stateName === "health") {
-            entryMap.set(systemName, `${statePercent}%`);
+        // If the tube's doing something, report it. If it's in progress, report the completion %.
+        if ("state" in tubeState) {
+          if ("progress" in tubeState) {
+            objectOutput.push({"key": "State", "value": `${tubeState.state} (${Math.floor(tubeState.progress * 100)}%, ${(tube.load_time - (tubeState.progress * tube.load_time)).toFixed(1)} sec.)`});
           } else {
-            entryMap.set(`&nbsp;&nbsp;${stateName}`, `${statePercent}%`);
+            objectOutput.push({"key": "State", "value": tubeState.state});
           }
+        } else {
+          objectOutput.push({"key": "State", "value": "Empty"});
         }
+
+        objectOutput.push({"key": "Bearing", "value": `${Canvas.normalizeHeading(tube.direction)}°`});
+        objectOutput.push({"key": "Load time", "value": `${tube.load_time} sec.`});
       }
-      break;
-    }
-    default:
     }
 
-    */
+    // Display system health and status info.
+    if ("systems" in selectedObject) {
+      objectOutput.push({"key": "h1", "value": "Systems"});
+
+      for (const system in selectedObject.systems) {
+        console.debug(system, selectedObject.systems[system]);
+        objectOutput.push({"key": "h2", "value": system});
+        if ("health" in selectedObject.systems[system]) {
+          objectOutput.push({"key": "Health", "value": `${Math.floor(selectedObject.systems[system]["health"] * 100)}%`});
+        }
+
+        // We only care about heat, power, and coolant if it's a player ship.
+        if (selectedObject.type === "PlayerSpaceship") {
+          objectOutput.push({"key": "Power", "value": `${Math.floor(selectedObject.systems[system]["power_level"] * 100)}% (request ${Math.floor(selectedObject.systems[system]["power_request"] * 100)}%)`});
+          objectOutput.push({"key": "Heat", "value": `${Math.floor(selectedObject.systems[system]["heat"] * 100)}%`});
+          objectOutput.push({"key": "Coolant", "value": `${Math.floor(selectedObject.systems[system]["coolant_level"] * 10)}% (request ${Math.floor(selectedObject.systems[system]["coolant_request"] * 100)}%)`});
+        }
+      }
+    }
+
     // Populate infobox with object info.
     for (let index = 0; index < objectOutput.length; index += 1) {
       const row = objectOutput[index];

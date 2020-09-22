@@ -412,15 +412,16 @@ input[type=range]:focus::-ms-fill-upper {
 
 .ee-infobox-header {
   text-align: center;
+}
+
+.ee-infobox-header-h1 {
+  background-color: #6060C0;
   font-family: 'Bebas Neue Bold', 'Impact', 'Arial Narrow', sans-serif;
   font-weight: 700;
 }
 
-.ee-infobox-header-h1 {
-  background-color: #202040;
-}
-
 .ee-infobox-header-h2 {
+  background-color: #202040;
   font-family: 'Bebas Neue Regular', 'Impact', 'Arial Narrow', sans-serif;
   font-weight: 400;
 }
