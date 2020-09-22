@@ -357,14 +357,6 @@ input[type=range]:focus::-ms-fill-upper {
   padding: 5px 0 3px 0;
 }
 
-#infobox-content .ee-table-key {
-  font-family: 'Bebas Neue Book', 'Impact', 'Arial Narrow', sans-serif;
-  font-weight: 300;
-  padding-right: 10px;
-  text-align: right;
-  width: 50%;
-}
-
 #droptarget {
   margin: 0;
 }
@@ -414,6 +406,15 @@ input[type=range]:focus::-ms-fill-upper {
   text-align: center;
 }
 
+.ee-infobox-title {
+  background-color: #6060C0;
+  font-size: 24px;
+}
+
+#infobox-content .ee-infobox-title .ee-infobox-header {
+  padding: 5px 0 0 0;
+}
+
 .ee-infobox-header-h1 {
   background-color: #6060C0;
   font-family: 'Bebas Neue Bold', 'Impact', 'Arial Narrow', sans-serif;
@@ -429,4 +430,12 @@ input[type=range]:focus::-ms-fill-upper {
 .ee-infobox-header-h3 {
   font-family: 'Bebas Neue Book', 'Impact', 'Arial Narrow', sans-serif;
   font-weight: 300;
+}
+
+#infobox-content .ee-table-key {
+  font-family: 'Bebas Neue Book', 'Impact', 'Arial Narrow', sans-serif;
+  font-weight: 300;
+  padding-right: 10px;
+  text-align: right;
+  width: 50%;
 }

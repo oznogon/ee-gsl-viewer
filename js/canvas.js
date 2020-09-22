@@ -9,6 +9,9 @@ class Canvas {
     document.fonts.load("20pt 'Bebas Neue Bold'");
     document.fonts.load("20pt 'EmptyEpsilon Icons'");
 
+    // Toggle hitcanvas layer drawing.
+    this._debugDrawing = false;
+
     // Each sector is a 20U square.
     this.sectorSize = 20000.0;
 
@@ -273,16 +276,30 @@ class Canvas {
     this.updateSelection(timeValue);
 
     // Populate the infobox with data. TODO: Customize mapping by key type.
-    const infoboxContent = $("#infobox-content"),
-      cssFaction = selectedObject.faction.split(" ").join("_") || "no_faction";
+    const infoboxContent = $("#infobox-content");
     let infoboxContents = "",
+      cssFaction = "no_faction",
       // Rotation at 0.0 points right/east. Adjust it so 0.0 points up/north.
       heading = Canvas.normalizeHeading(selectedObject.rotation + 90.0);
+
+    if ("faction" in selectedObject) {
+      cssFaction = selectedObject.faction.split(" ").join("_");
+    }
 
     const objectOutput = [];
 
     // # Callsign (Faction)
-    objectOutput.push({"key": "h1", "value": `${selectedObject.callsign} (${selectedObject.faction})`});
+    if ("callsign" in selectedObject) {
+      if ("faction" in selectedObject) {
+        objectOutput.push({"key": "h1", "value": `${selectedObject.callsign} (${selectedObject.faction})`});
+      } else {
+        objectOutput.push({"key": "h1", "value": selectedObject.callsign});
+      }
+    } else if ("faction" in selectedObject) {
+      objectOutput.push({"key": "h1", "value": `${selectedObject.type} (${selectedObject.faction})`});
+    } else {
+      objectOutput.push({"key": "h1", "value": selectedObject.type});
+    }
 
     // Add ship type. Flag if it's a player ship.
     switch (selectedObject.type) {
@@ -310,45 +327,51 @@ class Canvas {
       objectOutput.push({"key": "Heading", "value": `${heading.toFixed(1)}°`});
     }
 
-    if ("turn_speed" in selectedObject.config) {
-      objectOutput.push({"key": "Rotation rate", "value": `${(selectedObject.config.turn_speed).toFixed(1)}°/sec.`});
-    }
-
-    if ("impulse_speed" in selectedObject.config) {
-      objectOutput.push({"key": "h2", "value": "Impulse Propulsion"});
-      objectOutput.push({"key": "Speed", "value": `${(selectedObject.config.impulse_speed * selectedObject.output.impulse).toFixed(1)} (max ${selectedObject.config.impulse_speed})`});
-      objectOutput.push({"key": "Acceleration", "value": `${(selectedObject.config.impulse_acceleration)}`});
-      objectOutput.push({"key": "Throttle", "value": `${Math.floor(selectedObject.output.impulse * 100)}% (target ${Math.floor(selectedObject.input.impulse * 100)}%)`});
-    }
-
-    if ("combat_maneuver_boost" in selectedObject.config) {
-      objectOutput.push({"key": "h2", "value": "Combat Maneuvering"});
-      objectOutput.push({"key": "Charge", "value": `${Math.floor(selectedObject.output.combat_maneuver_charge * 100)}% available`});
-      objectOutput.push({"key": "Boost", "value": `${Math.floor(selectedObject.output.combat_maneuver_boost * 100)}% engaged`});
-      objectOutput.push({"key": "Strafe", "value": `${Math.floor(selectedObject.output.combat_maneuver_strafe * 100)}% engaged`});
-    }
-
-    if ("jumpdrive" in selectedObject.config) {
-      objectOutput.push({"key": "h2", "value": "Jump Drive"});
-
-      // Charge is only in the object if we're not currently jumping
-      if ("charge" in selectedObject.output.jump) {
-        objectOutput.push({"key": "Drive", "value": "Idle"});
-        objectOutput.push({"key": "Charge", "value": Math.floor(selectedObject.output.jump.charge)});
-        objectOutput.push({"key": "Distance", "value": "—"});
-        objectOutput.push({"key": "Delay", "value": "—"});
-      } else {
-        objectOutput.push({"key": "Drive", "value": "Engaged"});
-        objectOutput.push({"key": "Charge", "value": "—"});
-        objectOutput.push({"key": "Distance", "value": `${(selectedObject.output.jump.distance / 1000).toFixed(1)}U`});
-        objectOutput.push({"key": "Delay", "value": `${(selectedObject.output.jump.delay).toFixed(1)} sec.`});
+    if ("config" in selectedObject) {
+      if ("turn_speed" in selectedObject.config) {
+        objectOutput.push({"key": "Rotation rate", "value": `${(selectedObject.config.turn_speed).toFixed(1)}°/sec.`});
       }
-    }
 
-    if ("warp" in selectedObject.config) {
-      objectOutput.push({"key": "h2", "value": "Warp Drive"});
-      objectOutput.push({"key": "Speed", "value": `${Math.floor(selectedObject.output.warp)} (max ${Math.floor(selectedObject.config.warp)})`});
-      objectOutput.push({"key": "Factor setting", "value": selectedObject.input.warp.toFixed(1)});
+      if ("impulse_speed" in selectedObject.config) {
+        objectOutput.push({"key": "h2", "value": "Impulse Propulsion"});
+        objectOutput.push({"key": "Speed", "value": `${(selectedObject.config.impulse_speed * selectedObject.output.impulse).toFixed(1)} (max ${selectedObject.config.impulse_speed})`});
+        objectOutput.push({"key": "Acceleration", "value": `${(selectedObject.config.impulse_acceleration)}`});
+        objectOutput.push({"key": "Throttle", "value": `${Math.floor(selectedObject.output.impulse * 100)}% (target ${Math.floor(selectedObject.input.impulse * 100)}%)`});
+      }
+
+      if ("combat_maneuver_boost" in selectedObject.config) {
+        objectOutput.push({"key": "h2", "value": "Combat Maneuvering"});
+        objectOutput.push({"key": "Charge", "value": `${Math.floor(selectedObject.output.combat_maneuver_charge * 100)}% available`});
+        objectOutput.push({"key": "Boost", "value": `${Math.floor(selectedObject.output.combat_maneuver_boost * 100)}% engaged`});
+        objectOutput.push({"key": "Strafe", "value": `${Math.floor(selectedObject.output.combat_maneuver_strafe * 100)}% engaged`});
+      }
+
+      if ("jumpdrive" in selectedObject.config) {
+        objectOutput.push({"key": "h2", "value": "Jump Drive"});
+
+        // Charge is only in the object if we're not currently jumping
+        if ("output" in selectedObject && "jump" in selectedObject.output) {
+          if ("charge" in selectedObject.output.jump) {
+            objectOutput.push({"key": "Drive", "value": "Idle"});
+            objectOutput.push({"key": "Charge", "value": Math.floor(selectedObject.output.jump.charge)});
+            objectOutput.push({"key": "Distance", "value": "—"});
+            objectOutput.push({"key": "Delay", "value": "—"});
+          } else {
+            objectOutput.push({"key": "Drive", "value": "Engaged"});
+            objectOutput.push({"key": "Charge", "value": "—"});
+            objectOutput.push({"key": "Distance", "value": `${(selectedObject.output.jump.distance / 1000).toFixed(1)}U`});
+            objectOutput.push({"key": "Delay", "value": `${(selectedObject.output.jump.delay).toFixed(1)} sec.`});
+          }
+        }
+      }
+
+      if ("config" in selectedObject) {
+        if ("warp" in selectedObject.config) {
+          objectOutput.push({"key": "h2", "value": "Warp Drive"});
+          objectOutput.push({"key": "Speed", "value": `${Math.floor(selectedObject.output.warp)} (max ${Math.floor(selectedObject.config.warp)})`});
+          objectOutput.push({"key": "Factor setting", "value": selectedObject.input.warp.toFixed(1)});
+        }
+      }
     }
 
     /*
@@ -360,10 +383,10 @@ class Canvas {
      * }
      */
 
-    objectOutput.push({"key": "h1", "value": "Defenses"});
-
-    // Hull: hull (`hull / config.hull`%)
-    objectOutput.push({"key": "Hull", "value": `${selectedObject.hull} (${Math.floor((selectedObject.hull / selectedObject.config.hull) * 100)}%)`});
+    if ("hull" in selectedObject) {
+      objectOutput.push({"key": "h1", "value": "Defenses"});
+      objectOutput.push({"key": "Hull", "value": `${selectedObject.hull} (${Math.floor((selectedObject.hull / selectedObject.config.hull) * 100)}%)`});
+    }
 
     // (If more than 0 shields)
     if ("shields" in selectedObject) {
@@ -399,106 +422,108 @@ class Canvas {
       }
     }
 
-    // # Beams
-    if ("beams" in selectedObject.config) {
-      objectOutput.push({"key": "h1", "value": "Beam Weapons"});
-      // Beam frequency: beam_frequency -> convert int to hz equivalent
-      // 400 + (frequency * 20)) + "THz";
-      objectOutput.push({"key": "Beam frequency", "value": Canvas.frequencyToString(selectedObject.beam_frequency)});
+    if ("config" in selectedObject) {
+      // # Beams
+      if ("beams" in selectedObject.config) {
+        objectOutput.push({"key": "h1", "value": "Beam Weapons"});
+        // Beam frequency: beam_frequency -> convert int to hz equivalent
+        // 400 + (frequency * 20)) + "THz";
+        objectOutput.push({"key": "Beam frequency", "value": Canvas.frequencyToString(selectedObject.beam_frequency)});
 
-      for (let index = 0; index < selectedObject.config.beams.length; index += 1) {
-        const beam = selectedObject.config.beams[index];
+        for (let index = 0; index < selectedObject.config.beams.length; index += 1) {
+          const beam = selectedObject.config.beams[index];
 
-        // Some ships have a 0-arc beam?
-        if (beam.arc > 0) {
-          objectOutput.push({"key": "h2", "value": `Beam Weapon ${index + 1}`});
-          objectOutput.push({"key": "Bearing", "value": `${Canvas.normalizeHeading(beam.direction)}°`});
-          objectOutput.push({"key": "Arc", "value": `${beam.arc}°`});
-          objectOutput.push({"key": "Range", "value": `${(beam.range / 1000).toFixed(1)}U`});
-          objectOutput.push({"key": "Damage", "value": `${beam.damage} (${(beam.damage / beam.cycle_time).toFixed(1)}/sec.)`});
-          objectOutput.push({"key": "Cycle time", "value": `${beam.cycle_time.toFixed(1)} sec.`});
+          // Some ships have a 0-arc beam?
+          if (beam.arc > 0) {
+            objectOutput.push({"key": "h2", "value": `Beam Weapon ${index + 1}`});
+            objectOutput.push({"key": "Bearing", "value": `${Canvas.normalizeHeading(beam.direction)}°`});
+            objectOutput.push({"key": "Arc", "value": `${beam.arc}°`});
+            objectOutput.push({"key": "Range", "value": `${(beam.range / 1000).toFixed(1)}U`});
+            objectOutput.push({"key": "Damage", "value": `${beam.damage} (${(beam.damage / beam.cycle_time).toFixed(1)}/sec.)`});
+            objectOutput.push({"key": "Cycle time", "value": `${beam.cycle_time.toFixed(1)} sec.`});
 
-          if ("turret_arc" in beam && beam.turret_arc > 0) {
-            objectOutput.push({"key": "Turret Bearing", "value": `${Canvas.normalizeHeading(beam.turret_direction)}°`});
-            objectOutput.push({"key": "Turret Arc", "value": `${beam.turret_arc}°`});
+            if ("turret_arc" in beam && beam.turret_arc > 0) {
+              objectOutput.push({"key": "Turret Bearing", "value": `${Canvas.normalizeHeading(beam.turret_direction)}°`});
+              objectOutput.push({"key": "Turret Arc", "value": `${beam.turret_arc}°`});
+            }
           }
         }
       }
-    }
 
-    // Enforce the same missile order as the game UI.
-    if ("missiles" in selectedObject) {
-      objectOutput.push({"key": "h1", "value": "Missiles and Mines"});
+      // Enforce the same missile order as the game UI.
+      if ("missiles" in selectedObject) {
+        objectOutput.push({"key": "h1", "value": "Missiles and Mines"});
 
-      if ("Homing" in selectedObject.config.missiles) {
-        // If there are 0 missiles of a type in stock, the value isn't reported at all.
-        if ("Homing" in selectedObject.missiles) {
-          objectOutput.push({"key": "Homing", "value": `${selectedObject.missiles.Homing} / ${selectedObject.config.missiles.Homing}`});
-        } else {
-          objectOutput.push({"key": "Homing", "value": `0 / ${selectedObject.config.missiles.Homing}`});
-        }
-      }
-
-      if ("Nuke" in selectedObject.config.missiles) {
-        if ("Nuke" in selectedObject.missiles) {
-          objectOutput.push({"key": "Nuke", "value": `${selectedObject.missiles.Nuke} / ${selectedObject.config.missiles.Nuke}`});
-        } else {
-          objectOutput.push({"key": "Nuke", "value": `0 / ${selectedObject.config.missiles.Nuke}`});
-        }
-      }
-
-      if ("EMP" in selectedObject.config.missiles) {
-        if ("EMP" in selectedObject.missiles) {
-          objectOutput.push({"key": "EMP", "value": `${selectedObject.missiles.EMP} / ${selectedObject.config.missiles.EMP}`});
-        } else {
-          objectOutput.push({"key": "EMP", "value": `0 / ${selectedObject.config.missiles.EMP}`});
-        }
-      }
-
-      if ("HVLI" in selectedObject.config.missiles) {
-        if ("HVLI" in selectedObject.missiles) {
-          objectOutput.push({"key": "HVLI", "value": `${selectedObject.missiles.HVLI} / ${selectedObject.config.missiles.HVLI}`});
-        } else {
-          objectOutput.push({"key": "HVLI", "value": `0 / ${selectedObject.config.missiles.HVLI}`});
-        }
-      }
-
-      if ("Mine" in selectedObject.config.missiles) {
-        if ("Mine" in selectedObject.missiles) {
-          objectOutput.push({"key": "Mine", "value": `${selectedObject.missiles.Mine} / ${selectedObject.config.missiles.Mine}`});
-        } else {
-          objectOutput.push({"key": "Mine", "value": `0 / ${selectedObject.config.missiles.Mine}`});
-        }
-      }
-    }
-
-    // Display info about the tubes.
-    if ("tubes" in selectedObject) {
-      for (let index = 0; index < selectedObject.config.tubes.length; index += 1) {
-        const tube = selectedObject.config.tubes[index],
-          tubeState = selectedObject.tubes[index];
-
-        objectOutput.push({"key": "h2", "value": `Weapon Tube ${index + 1}`});
-
-        if ("type" in tubeState) {
-          objectOutput.push({"key": "Missile Type", "value": tubeState.type});
-        } else {
-          objectOutput.push({"key": "Missile Type", "value": "None"});
-        }
-
-        // If the tube's doing something, report it. If it's in progress, report the completion %.
-        if ("state" in tubeState) {
-          if ("progress" in tubeState) {
-            objectOutput.push({"key": "State", "value": `${tubeState.state} (${Math.floor(tubeState.progress * 100)}%, ${(tube.load_time - (tubeState.progress * tube.load_time)).toFixed(1)} sec.)`});
+        if ("Homing" in selectedObject.config.missiles) {
+          // If there are 0 missiles of a type in stock, the value isn't reported at all.
+          if ("Homing" in selectedObject.missiles) {
+            objectOutput.push({"key": "Homing", "value": `${selectedObject.missiles.Homing} / ${selectedObject.config.missiles.Homing}`});
           } else {
-            objectOutput.push({"key": "State", "value": tubeState.state});
+            objectOutput.push({"key": "Homing", "value": `0 / ${selectedObject.config.missiles.Homing}`});
           }
-        } else {
-          objectOutput.push({"key": "State", "value": "Empty"});
         }
 
-        objectOutput.push({"key": "Bearing", "value": `${Canvas.normalizeHeading(tube.direction)}°`});
-        objectOutput.push({"key": "Load time", "value": `${tube.load_time} sec.`});
+        if ("Nuke" in selectedObject.config.missiles) {
+          if ("Nuke" in selectedObject.missiles) {
+            objectOutput.push({"key": "Nuke", "value": `${selectedObject.missiles.Nuke} / ${selectedObject.config.missiles.Nuke}`});
+          } else {
+            objectOutput.push({"key": "Nuke", "value": `0 / ${selectedObject.config.missiles.Nuke}`});
+          }
+        }
+
+        if ("EMP" in selectedObject.config.missiles) {
+          if ("EMP" in selectedObject.missiles) {
+            objectOutput.push({"key": "EMP", "value": `${selectedObject.missiles.EMP} / ${selectedObject.config.missiles.EMP}`});
+          } else {
+            objectOutput.push({"key": "EMP", "value": `0 / ${selectedObject.config.missiles.EMP}`});
+          }
+        }
+
+        if ("HVLI" in selectedObject.config.missiles) {
+          if ("HVLI" in selectedObject.missiles) {
+            objectOutput.push({"key": "HVLI", "value": `${selectedObject.missiles.HVLI} / ${selectedObject.config.missiles.HVLI}`});
+          } else {
+            objectOutput.push({"key": "HVLI", "value": `0 / ${selectedObject.config.missiles.HVLI}`});
+          }
+        }
+
+        if ("Mine" in selectedObject.config.missiles) {
+          if ("Mine" in selectedObject.missiles) {
+            objectOutput.push({"key": "Mine", "value": `${selectedObject.missiles.Mine} / ${selectedObject.config.missiles.Mine}`});
+          } else {
+            objectOutput.push({"key": "Mine", "value": `0 / ${selectedObject.config.missiles.Mine}`});
+          }
+        }
+      }
+
+      // Display info about the tubes.
+      if ("tubes" in selectedObject) {
+        for (let index = 0; index < selectedObject.config.tubes.length; index += 1) {
+          const tube = selectedObject.config.tubes[index],
+            tubeState = selectedObject.tubes[index];
+
+          objectOutput.push({"key": "h2", "value": `Weapon Tube ${index + 1}`});
+
+          if ("type" in tubeState) {
+            objectOutput.push({"key": "Missile Type", "value": tubeState.type});
+          } else {
+            objectOutput.push({"key": "Missile Type", "value": "None"});
+          }
+
+          // If the tube's doing something, report it. If it's in progress, report the completion %.
+          if ("state" in tubeState) {
+            if ("progress" in tubeState) {
+              objectOutput.push({"key": "State", "value": `${tubeState.state} (${Math.floor(tubeState.progress * 100)}%, ${(tube.load_time - (tubeState.progress * tube.load_time)).toFixed(1)} sec.)`});
+            } else {
+              objectOutput.push({"key": "State", "value": tubeState.state});
+            }
+          } else {
+            objectOutput.push({"key": "State", "value": "Empty"});
+          }
+
+          objectOutput.push({"key": "Bearing", "value": `${Canvas.normalizeHeading(tube.direction)}°`});
+          objectOutput.push({"key": "Load time", "value": `${tube.load_time} sec.`});
+        }
       }
     }
 
@@ -528,7 +553,8 @@ class Canvas {
 
       if (row.key === "h1" || row.key === "h2" || row.key === "h3") {
         // Special handling of the title row
-        if (row.value === `${selectedObject.callsign} (${selectedObject.faction})`) {
+        // row.value === `${selectedObject.callsign} (${selectedObject.faction})`
+        if (index === 0) {
           infoboxContents = infoboxContents.concat(`<tr class="ee-infobox-title ee-faction-${cssFaction}"><td colspan=2 class="ee-infobox-header">${row.value}</td>`);          
         } else {
           infoboxContents = infoboxContents.concat(`<tr class="ee-infobox-header-${row.key}"><td colspan=2 class="ee-infobox-header">${row.value}</td>`);
@@ -734,10 +760,12 @@ class Canvas {
         break;
         case "WarpJammer": {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#C89664", opaque, sizeJammer);
+          Canvas.drawRectangle(ctxHit, positionX, positionY, this._zoomScale, Canvas.idToHex(entry.id), 1.0, 8.0, 1.33);
         }
         break;
         case "SupplyDrop": {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#00FFFF", opaque, sizeCollectible);
+          Canvas.drawRectangle(ctxHit, positionX, positionY, this._zoomScale, Canvas.idToHex(entry.id), 1.0, 8.0, 1.33);
         }
         break;
         case "SpaceStation": {
@@ -756,6 +784,7 @@ class Canvas {
         break;
         case "Artifact": {
           Canvas.drawCircle(ctx, positionX, positionY, this._zoomScale, "#FFFFFF", opaque, sizeCollectible);
+          Canvas.drawRectangle(ctxHit, positionX, positionY, this._zoomScale, Canvas.idToHex(entry.id), 1.0, 8.0, 1.33);
         }
         break;
         case "Planet": {
@@ -810,6 +839,10 @@ class Canvas {
     ctx.fillStyle = "#FFFFFF";
     ctx.font = "20px 'Bebas Neue Book', Impact, Arial, sans-serif";
     ctx.fillText(stateText, 20, 40);
+
+    if (this._debugDrawing === true) {
+      ctx.drawImage(this._hitCanvas, 0, 0);
+    }
   }
 
   /*

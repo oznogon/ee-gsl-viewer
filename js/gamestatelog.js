@@ -368,4 +368,9 @@ $().ready(function () {
   Mousetrap.bind("z", () => advanceTimeline(-1));
   Mousetrap.bind("shift+x", () => advanceTimeline(10));
   Mousetrap.bind("shift+z", () => advanceTimeline(-10));
+  Mousetrap.bind("shift+d", () => {
+    canvas._debugDrawing = !canvas._debugDrawing;
+    console.debug(canvas._selectedObject);
+    canvas.update();
+  });
 });
