@@ -257,6 +257,8 @@ class Canvas {
     return `${400 + (frequency * 20)} THz`;
   }
 
+  // TODO: Break infobox handling into its own class, use DOM instead of hardcoded HTML,
+  // render all elements, update them each tick, and toggle unusued ones instead of rewriting the whole infobox each tick
   updateSelectionInfobox (timeValue = $("#time_selector").val()) {
     // Clear the infobox and don't bother continuing if the selected object isn't valid.
     if (Canvas.isSelectionValid(this._selectedObject) === false) {
@@ -329,7 +331,7 @@ class Canvas {
     if ("jumpdrive" in selectedObject.config) {
       objectOutput.push({"key": "h2", "value": "Jump Drive"});
 
-      // charge is only in the object if we're not currently jumping
+      // Charge is only in the object if we're not currently jumping
       if ("charge" in selectedObject.output.jump) {
         objectOutput.push({"key": "Drive", "value": "Idle"});
         objectOutput.push({"key": "Charge", "value": Math.floor(selectedObject.output.jump.charge)});
@@ -344,7 +346,6 @@ class Canvas {
     }
 
     if ("warp" in selectedObject.config) {
-      // Warp drive: ???
       objectOutput.push({"key": "h2", "value": "Warp Drive"});
       objectOutput.push({"key": "Speed", "value": `${Math.floor(selectedObject.output.warp)} (max ${Math.floor(selectedObject.config.warp)})`});
       objectOutput.push({"key": "Factor setting", "value": selectedObject.input.warp.toFixed(1)});
@@ -368,7 +369,9 @@ class Canvas {
     if ("shields" in selectedObject) {
       // Shield frequency: shield_frequency -> convert int to hz equivalent
       // return string(400 + (frequency * 20)) + "THz";
-      objectOutput.push({"key": "Shield frequency", "value": Canvas.frequencyToString(selectedObject.shield_frequency)});
+      if ("shield_frequency" in selectedObject) {
+        objectOutput.push({"key": "Shield frequency", "value": Canvas.frequencyToString(selectedObject.shield_frequency)});
+      }
 
       switch (selectedObject.shields.length) {
         case 1:
@@ -504,8 +507,8 @@ class Canvas {
       objectOutput.push({"key": "h1", "value": "Systems"});
 
       for (const system in selectedObject.systems) {
-        console.debug(system, selectedObject.systems[system]);
         objectOutput.push({"key": "h2", "value": system});
+
         if ("health" in selectedObject.systems[system]) {
           objectOutput.push({"key": "Health", "value": `${Math.floor(selectedObject.systems[system]["health"] * 100)}%`});
         }
@@ -524,6 +527,7 @@ class Canvas {
       const row = objectOutput[index];
 
       if (row.key === "h1" || row.key === "h2" || row.key === "h3") {
+        // Special handling of the title row
         if (row.value === `${selectedObject.callsign} (${selectedObject.faction})`) {
           infoboxContents = infoboxContents.concat(`<tr class="ee-infobox-title ee-faction-${cssFaction}"><td colspan=2 class="ee-infobox-header">${row.value}</td>`);          
         } else {
