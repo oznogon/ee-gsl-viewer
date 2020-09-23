@@ -1366,7 +1366,7 @@ class Canvas {
      */
 
     // Draw beam arcs if the object has them and we're not drawing on the hit canvas.
-    if (typeof entry.config !== "undefined" && typeof entry.config.beams !== "undefined" && !drawingOnHitCanvas) {
+    if ("config" in entry && "beams" in entry.config && !drawingOnHitCanvas) {
       for (let beamIndex = 0; beamIndex < entry.config.beams.length; beamIndex += 1) {
         const beam = entry.config.beams[beamIndex],
           arc = entry.rotation + beam.direction,
@@ -1392,7 +1392,30 @@ class Canvas {
         ctx.stroke();
         ctx.globalAlpha = 1.0;
 
-        // TODO: Draw turret arcs. #15
+        // Draw turret arcs.
+        if (beam.turret_arc > 0) {
+          const turret_arc = entry.rotation + beam.turret_direction,
+            turret_a1 = (turret_arc - (beam.turret_arc / 2.0)) / 180.0 * Math.PI,
+            turret_a2 = (turret_arc + (beam.turret_arc / 2.0)) / 180.0 * Math.PI,
+            turret_x1 = positionX + (Math.cos(turret_a1) * range),
+            turret_y1 = positionY + (Math.sin(turret_a1) * range),
+            turret_x2 = positionX + (Math.cos(turret_a2) * range),
+            turret_y2 = positionY + (Math.sin(turret_a2) * range);
+
+          // Draw the arc.
+          ctx.beginPath();
+          ctx.moveTo(positionX, positionY);
+          ctx.lineTo(turret_x1, turret_y1);
+          ctx.arc(positionX, positionY, range, turret_a1, turret_a2, false);
+          ctx.lineTo(turret_x2, turret_y2);
+          ctx.lineTo(positionX, positionY);
+
+          ctx.globalAlpha = 0.2;
+          ctx.strokeStyle = "#FF0000";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.globalAlpha = 1.0;
+        }
       }
     }
 
