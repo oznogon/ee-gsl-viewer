@@ -153,10 +153,10 @@ class Canvas {
         // If view locking is enabled, point the camera at the selected object.
         if (this.isViewLocked === true) {
           this.pointCameraAt(this._selectedObject.position[0], this._selectedObject.position[1]);
-
-          // Update the canvas.
-          this.update();
         }
+
+        // Update the canvas.
+        this.update();
       } else {
         // Otherwise, hide the infobox if there's no selected object.
         this._infobox.hide();
@@ -275,20 +275,22 @@ class Canvas {
     // Update the selected object for the current time.
     this.updateSelection(timeValue);
 
-    // Populate the infobox with data. TODO: Customize mapping by key type.
+    // Populate the infobox with data.
     const infoboxContent = $("#infobox-content");
     let infoboxContents = "",
       cssFaction = "no_faction",
       // Rotation at 0.0 points right/east. Adjust it so 0.0 points up/north.
       heading = Canvas.normalizeHeading(selectedObject.rotation + 90.0);
 
+    // Style the faction if present.
     if ("faction" in selectedObject) {
       cssFaction = selectedObject.faction.split(" ").join("_");
     }
 
+    // Initialize the ordered output.
     const objectOutput = [];
 
-    // # Callsign (Faction)
+    // Title is the callsign if present (object type if not), with faction if one is assigned.
     if ("callsign" in selectedObject) {
       if ("faction" in selectedObject) {
         objectOutput.push({"key": "h1", "value": `${selectedObject.callsign} (${selectedObject.faction})`});
@@ -316,17 +318,20 @@ class Canvas {
         objectOutput.push({"key": "Type", "value": selectedObject.type});
     }
 
+    // Display the object's coordinates.
     objectOutput.push({"key": "Position", "value": `${selectedObject.position[0].toFixed(1)}, ${selectedObject.position[1].toFixed(1)}`});
 
     // # Maneuvering
     objectOutput.push({"key": "h1", "value": "Maneuvering"});
 
+    // Display the objects heading, and its target heading if it has input.
     if ("input" in selectedObject) {
       objectOutput.push({"key": "Heading", "value": `${heading.toFixed(1)}° (plotted ${Canvas.normalizeHeading(selectedObject.input.rotation + 90).toFixed(1)}°)`});
     } else {
       objectOutput.push({"key": "Heading", "value": `${heading.toFixed(1)}°`});
     }
 
+    // Display maneuvering capabilities, if any.
     if ("config" in selectedObject) {
       if ("turn_speed" in selectedObject.config) {
         objectOutput.push({"key": "Rotation rate", "value": `${Math.max(0, ((selectedObject.systems["Maneuvering"]["power_level"] * selectedObject.systems["Maneuvering"]["health"]) * selectedObject.config.turn_speed).toFixed(1))}°/sec.`});
@@ -334,7 +339,13 @@ class Canvas {
 
       if ("impulse_speed" in selectedObject.config) {
         objectOutput.push({"key": "h2", "value": "Impulse Propulsion"});
-        objectOutput.push({"key": "Speed", "value": `${Math.max(0, ((selectedObject.systems["Impulse Engines"]["power_level"] * selectedObject.systems["Impulse Engines"]["health"]) * (selectedObject.config.impulse_speed * selectedObject.output.impulse)).toFixed(1))} (max ${Math.max(0, ((selectedObject.systems["Impulse Engines"]["power_level"] * selectedObject.systems["Impulse Engines"]["health"]) * selectedObject.config.impulse_speed).toFixed(1))})`});
+
+        if ("Impulse Engines" in selectedObject.systems) {
+          objectOutput.push({"key": "Speed", "value": `${Math.max(0, ((selectedObject.systems["Impulse Engines"]["power_level"] * selectedObject.systems["Impulse Engines"]["health"]) * (selectedObject.config.impulse_speed * selectedObject.output.impulse)).toFixed(1))} (max ${Math.max(0, ((selectedObject.systems["Impulse Engines"]["power_level"] * selectedObject.systems["Impulse Engines"]["health"]) * selectedObject.config.impulse_speed).toFixed(1))})`});
+        } else {
+          objectOutput.push({"key": "Speed", "value": `${Math.max(0, selectedObject.config.impulse_speed * selectedObject.output.impulse).toFixed(1)} (max ${Math.max(0, selectedObject.config.impulse_speed).toFixed(1)})`});
+        }
+
         objectOutput.push({"key": "Acceleration", "value": `${(selectedObject.config.impulse_acceleration)}`});
         objectOutput.push({"key": "Throttle", "value": `${Math.floor(selectedObject.output.impulse * 100)}% (target ${Math.floor(selectedObject.input.impulse * 100)}%)`});
       }
@@ -346,25 +357,29 @@ class Canvas {
         objectOutput.push({"key": "Strafe", "value": `${Math.floor(selectedObject.output.combat_maneuver_strafe * 100)}% engaged`});
       }
 
+      // Report on the jump drive.
       if ("jumpdrive" in selectedObject.config) {
         objectOutput.push({"key": "h2", "value": "Jump Drive"});
 
-        // Charge is only in the object if we're not currently jumping
+        // `charge` is in the object only if we're not currently jumping.
         if ("output" in selectedObject && "jump" in selectedObject.output) {
           if ("charge" in selectedObject.output.jump) {
+            // If we're not jumping, report so and track the current charge.
             objectOutput.push({"key": "Drive", "value": "Idle"});
             objectOutput.push({"key": "Charge", "value": Math.floor(selectedObject.output.jump.charge)});
             objectOutput.push({"key": "Distance", "value": "—"});
             objectOutput.push({"key": "Delay", "value": "—"});
           } else {
+            // If we're jumping, report so and track the jump distance and time to jump.
             objectOutput.push({"key": "Drive", "value": "Engaged"});
             objectOutput.push({"key": "Charge", "value": "—"});
             objectOutput.push({"key": "Distance", "value": `${(selectedObject.output.jump.distance / 1000).toFixed(1)}U`});
-            objectOutput.push({"key": "Delay", "value": `${(selectedObject.output.jump.delay).toFixed(1)} sec.`});
+            objectOutput.push({"key": "Time to Jump", "value": `${(selectedObject.output.jump.delay).toFixed(1)} sec.`});
           }
         }
       }
 
+      // Report on the warp drive.
       if ("config" in selectedObject) {
         if ("warp" in selectedObject.config) {
           objectOutput.push({"key": "h2", "value": "Warp Drive"});
@@ -383,6 +398,7 @@ class Canvas {
      * }
      */
 
+    // Report on defensive capabilities, if the object has any. Start with the hull.
     if ("hull" in selectedObject) {
       objectOutput.push({"key": "h1", "value": "Defenses"});
       objectOutput.push({"key": "Hull", "value": `${Math.floor(selectedObject.hull)} (${Math.floor((selectedObject.hull / selectedObject.config.hull) * 100)}%)`});
@@ -422,6 +438,7 @@ class Canvas {
       }
     }
 
+    // Report on weapons.
     if ("config" in selectedObject) {
       // # Beams
       if ("beams" in selectedObject.config) {
@@ -686,11 +703,7 @@ class Canvas {
       this._view.y = 0;
     }
 
-    /*
-     * Cap the zoom scales to reasonable levels.
-     * maxZoom: 100px = 0.08U
-     * minZoom: 100px = 100U
-     */
+    // Cap the zoom scales to reasonable levels. maxZoom: 100px = 0.08U, minZoom: 100px = 100U
     this._zoomScale = Math.min(maxZoom, Math.max(minZoom, this._zoomScale));
 
     // Draw the canvas background.
@@ -831,6 +844,39 @@ class Canvas {
           // If an object is an unknown type, log a debug message and display it in fuscia.
           console.error(`Unknown object type: ${entry.type}`);
           Canvas.drawSquare(ctx, positionX, positionY, this._zoomScale, "#FF00FF", opaque, sizeMin);
+        }
+
+        // If the object is selected, draw an indicator.
+        //if (Canvas.isSelectionValid(this._selectedObject) && "id" in this._selectedObject && entry.id === this._selectedObject.id) {
+
+        // If objects have hull and we're zoomed in close enough, draw an indicator.
+        if (this._zoomScale > 0.05 && "config" in entry && "hull" in entry.config) {
+          ctx.beginPath();
+          ctx.arc(positionX, positionY, Math.max(4, 200 * this._zoomScale), 0, 2 * Math.PI, false);
+          ctx.globalAlpha = 1.0;
+          ctx.strokeStyle = "#00AA00";
+          ctx.lineWidth = 0.5 + Math.min(5, 3 * (entry.hull / 100.0));
+          ctx.stroke();
+
+          // If objects also have shields and we're zoomed in close enough, draw indicators.
+          if (this._zoomScale > 0.05 && "config" in entry && "shields" in entry.config) {
+            const segmentLength = 2 * Math.PI / entry.config.shields.length,
+              initialAngle = Canvas.degreesToRadians(entry.rotation) - (segmentLength / 2);
+
+            for (let index = 0; index < entry.config.shields.length; index += 1) {
+              const currentShield = entry.shields[index],
+                configShield = entry.config.shields[index],
+                gap = Math.min(0.1, (entry.config.shields.length - 1) * 0.1);
+
+              ctx.beginPath();
+              ctx.arc(positionX, positionY, Math.max(6, 300 * this._zoomScale), initialAngle + gap + (index * segmentLength), initialAngle + ((index + 1) * segmentLength) - gap, false);
+
+              ctx.globalAlpha = 1.0 * (currentShield / configShield);
+              ctx.strokeStyle = "#0000FF";
+              ctx.lineWidth = 0.5 + Math.min(5, 3 * (currentShield / 100.0));
+              ctx.stroke();
+            }
+          }
         }
       }
     }
@@ -1115,7 +1161,7 @@ class Canvas {
   }
 
   // Draw a circle that scales with the zoom level.
-  static drawCircle (ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier, drawStroke = false, strokeColor = "#FF00FF", strokeSize = 5) {
+  static drawCircle (ctx, positionX, positionY, zoomScale, fillColor, fillAlpha, sizeModifier, drawStroke = false, strokeColor = "#FF00FF", strokeSize = 5, strokeAlpha = 1.0) {
     // Set an effective minimum size for the shape.
     const circleSize = Canvas.calculateMinimumSize(sizeModifier * 33.3, zoomScale, sizeModifier / 2);
 
@@ -1130,6 +1176,7 @@ class Canvas {
 
     // Draw a stroke around the shape, if enabled.
     if (drawStroke) {
+      ctx.globalAlpha = strokeAlpha;
       ctx.lineWidth = Math.min(strokeSize, circleSize / 10);
       ctx.strokeStyle = strokeColor;
       ctx.stroke();
@@ -1330,6 +1377,7 @@ class Canvas {
 
   // Draw a player or CPU ship.
   drawShip (ctx, positionX, positionY, entry, overrideFillColor = "#FF00FF") {
+    const sizeModifier = 4;
     // Initialize color brightness.
     let highColorMagnitude = "CC",
       lowColorMagnitude = "66",
@@ -1420,7 +1468,7 @@ class Canvas {
     }
 
     // Draw the shape and scale it on zoom.
-    Canvas.drawShapeWithRotation("delta", ctx, positionX, positionY, this._zoomScale, factionColor, 1.0, 4, entry.rotation);
+    Canvas.drawShapeWithRotation("delta", ctx, positionX, positionY, this._zoomScale, factionColor, 1.0, sizeModifier, entry.rotation);
 
     // Draw its callsign. Draw player callsigns brighter.
     if (this.showCallsigns === true) {
