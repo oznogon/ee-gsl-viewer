@@ -2,12 +2,11 @@
 class Canvas {
   constructor () {
     // Load fonts for canvas use.
-    document.fonts.load("20pt 'Bebas Neue Thin'");
-    document.fonts.load("20pt 'Bebas Neue Light'");
-    document.fonts.load("20pt 'Bebas Neue Book'");
-    document.fonts.load("20pt 'Bebas Neue Regular'");
-    document.fonts.load("20pt 'Bebas Neue Bold'");
-    document.fonts.load("20pt 'EmptyEpsilon Icons'");
+    const textFont = new FontFace('Big Shoulders', 'url(fonts/BigShoulders/BigShouldersText-VariableFont_wght.ttf)');
+    const iconFont = new FontFace('EmptyEpsilon Icons', 'url(fonts/icons-font/icons-font.woff)');
+
+    textFont.load().then((textFont) => { document.fonts.add(textFont); });
+    iconFont.load().then((iconFont) => { document.fonts.add(iconFont); });
 
     // Toggle hitcanvas layer drawing.
     this._debugDrawing = false;
@@ -57,10 +56,8 @@ class Canvas {
     this.blackHoleImage = new Image();
     this.blackHoleImage.src = "images/blackHole3d.png";
 
-    /*
-     * Create the hit canvas for clickable objects. We won't draw this for the user.
-     * https://lavrton.com/hit-region-detection-for-html5-canvas-and-how-to-listen-to-click-events-on-canvas-shapes-815034d7e9f8/
-     */
+    // Create the hit canvas for clickable objects. We won't draw this for the user.
+    // https://lavrton.com/hit-region-detection-for-html5-canvas-and-how-to-listen-to-click-events-on-canvas-shapes-815034d7e9f8/
     this._hitCanvas = document.createElement("canvas");
     $(this._hitCanvas).attr("id", "canvas-hit");
 
@@ -87,14 +84,12 @@ class Canvas {
       "y": 0.0
     };
 
-    /*
-     * Initialize target point in world space.
-     *
-     * this._worldPoint = {
-     *   "x": 0.0,
-     *   "y": 0.0
-     * };
-     */
+    // Initialize target point in world space.
+    //
+    // this._worldPoint = {
+    //   "x": 0.0,
+    //   "y": 0.0
+    // };
 
     // Initialize drag delta points.
     this._firstMouse = {
@@ -176,13 +171,10 @@ class Canvas {
     return value === undefined;
   }
 
-  // Format scenario time into MM:SS.
+  // Format scenario time from seconds to into HH:mm:ss.
   static formatTime (time) {
-    if (time % 60 < 10) {
-      return `${Math.floor(time / 60)}:0${time % 60}`;
-    }
-
-    return `${Math.floor(time / 60)}:${time % 60}`;
+    const result = new Date(time * 1000).toISOString().slice(11,19);
+    return `${result}`;
   }
 
   // Check whether the given object is defined, and still present and valid.
@@ -319,7 +311,7 @@ class Canvas {
     }
 
     // Display the object's coordinates.
-    objectOutput.push({"key": "Position", "value": `${selectedObject.position[0].toFixed(1)}, ${selectedObject.position[1].toFixed(1)}`});
+    objectOutput.push({"key": "Position", "value": `${selectedObject.position[0].toFixed(1)}, ${selectedObject.position[1].toFixed(1)} (${Canvas.getSectorDesignation(selectedObject.position[0], selectedObject.position[1], this.sectorSize)})`});
 
     // # Maneuvering
     objectOutput.push({"key": "h1", "value": "Maneuvering"});
@@ -389,14 +381,12 @@ class Canvas {
       }
     }
 
-    /*
-     * // Target: target ID -> convert ID to callsign || No target
-     * if ("target" in selectedObject) {
-     *   objectOutput.push({"key": "Target", "value": selectedObject.target});
-     * } else {
-     *   objectOutput.push({"key": "Target", "value": "None"});
-     * }
-     */
+    // // Target: target ID -> convert ID to callsign || No target
+    // if ("target" in selectedObject) {
+    //   objectOutput.push({"key": "Target", "value": selectedObject.target});
+    // } else {
+    //   objectOutput.push({"key": "Target", "value": "None"});
+    // }
 
     // Report on defensive capabilities, if the object has any. Start with the hull.
     if ("hull" in selectedObject) {
@@ -677,12 +667,12 @@ class Canvas {
       entries = log.getEntriesAtTime(time),
       // Current position and zoom text bar values.
       stateTextTime = Canvas.formatTime(time),
-      stateTextZoom = `100px = ${(0.1 / this._zoomScale).toPrecision(3)}U`,
-      stateTextX = `X: ${this._view.x.toFixed(1)}`,
-      stateTextY = `Y: ${this._view.y.toFixed(1)}`,
-      stateTextSector = `(${Canvas.getSectorDesignation(this._view.x, this._view.y, this.sectorSize)})`,
+      stateTextScale = `100px = ${(0.1 / this._zoomScale).toPrecision(3)}U`,
+      stateTextXPos = `X: ${this._view.x.toFixed(1)}`,
+      stateTextYPos = `Y: ${this._view.y.toFixed(1)}`,
+      stateTextSector = `(${Canvas.getSectorDesignation(this._view.x, this._view.y, this.sectorSize)})`;
       // TODO: Fix out-of-range sector designations in-game.
-      stateText = `${stateTextTime} / ${stateTextZoom} / ${stateTextX} / ${stateTextY} ${stateTextSector}`;
+      // stateText = `${stateTextTime} / ${stateTextZoom} / ${stateTextX} / ${stateTextY} ${stateTextSector}`;
 
     // Set canvas size to document size.
     this._canvas[0].width = width;
@@ -854,7 +844,7 @@ class Canvas {
           ctx.beginPath();
           ctx.arc(positionX, positionY, Math.max(4, 200 * this._zoomScale), 0, 2 * Math.PI, false);
           ctx.globalAlpha = 1.0;
-          ctx.strokeStyle = "#00AA00";
+          ctx.strokeStyle = "#0a0";
           ctx.lineWidth = 0.5 + Math.min(5, 3 * (entry.hull / 100.0));
           ctx.stroke();
 
@@ -872,7 +862,7 @@ class Canvas {
               ctx.arc(positionX, positionY, Math.max(6, 300 * this._zoomScale), initialAngle + gap + (index * segmentLength), initialAngle + ((index + 1) * segmentLength) - gap, false);
 
               ctx.globalAlpha = 1.0 * (currentShield / configShield);
-              ctx.strokeStyle = "#0000FF";
+              ctx.strokeStyle = "#00f";
               ctx.lineWidth = 0.5 + Math.min(5, 3 * (currentShield / 100.0));
               ctx.stroke();
             }
@@ -882,19 +872,38 @@ class Canvas {
     }
 
     // Draw the info line showing the scenario time, scale, X/Y coordinates, and sector designation.
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "20px 'Bebas Neue Book', Impact, Arial, sans-serif";
-    ctx.fillText(stateText, 20, 40);
+    ctx.fillStyle = "#fff";
+    ctx.font = "20px 'Big Shoulders', 'Bebas Neue Book', Impact, Arial, sans-serif";
+
+    let charXPos = 20;
+    let charYPos = 40;
+
+    for (let i in stateTextTime) {
+        ctx.fillText(stateTextTime[i], charXPos, charYPos)
+
+        if (stateTextTime[i] === ":") {
+            charXPos += 4;
+        } else {
+            charXPos += 8;
+        }
+    }
+
+    charXPos += 20;
+    ctx.fillText(stateTextScale, charXPos, charYPos);
+    charXPos += 110;
+    ctx.fillText(stateTextXPos, charXPos, charYPos);
+    charXPos += 100;
+    ctx.fillText(stateTextYPos, charXPos, charYPos);
+    charXPos += 100;
+    ctx.fillText(stateTextSector, charXPos, charYPos);
 
     if (this._debugDrawing === true) {
       ctx.drawImage(this._hitCanvas, 0, 0);
     }
   }
 
-  /*
-   * Sectors are designated with a letter (Y axis) and number (X axis). Coordinates 0, 0 represent the intersection of
-   * F and 5. Each sector is a 20U (20000) square.
-   */
+  // Sectors are designated with a letter (Y axis) and number (X axis). Coordinates 0, 0 represent the intersection of
+  // F and 5. Each sector is a 20U (20000) square.
   static getSectorDesignation (positionX, positionY, sectorSize) {
     let sectorLetter = String.fromCharCode("F".charCodeAt() + Math.floor(positionY / sectorSize)),
       sectorLetterBigDigit = "",
@@ -995,7 +1004,7 @@ class Canvas {
 
     // Draw sector designations on the grid, unless the grid is zoomed out far enough.
     ctx.fillStyle = gridlineColor;
-    ctx.font = "24px 'Bebas Neue Regular', Impact, Arial, sans-serif";
+    ctx.font = "24px 'Big Shoulders', 'Bebas Neue Regular', Impact, Arial, sans-serif";
 
     if (gridlineHorizCanvasList.length <= 25 && gridlineVertCanvasList.length <= 25) {
       for (let eachGridlineHoriz = 0; eachGridlineHoriz < gridlineHorizCanvasList.length;
@@ -1008,11 +1017,9 @@ class Canvas {
     }
   }
 
-  /*
-   * Get a hex color code for the faction, with specified magnitude for the color mix.
-   * Would be nice to use the GM colors directly from factioninfo.lua.
-   * Returns a long hex color string (ie. #FF0000).
-   */
+  // Get a hex color code for the faction, with specified magnitude for the color mix.
+  // Would be nice to use the GM colors directly from factioninfo.lua.
+  // Returns a long hex color string (ie. #FF0000).
   static getFactionColor (faction, lowColorMagnitude, highColorMagnitude) {
     let lowColor = `${lowColorMagnitude}`,
       highColor = `${highColorMagnitude}`;
@@ -1288,24 +1295,22 @@ class Canvas {
     // Draw the image. Must be square; most EE object sprites are anyway.
     ctx.drawImage(image, 0, 0, imageSize, imageSize);
 
-    /*
-     * TODO: Blend a rect filled with fillColorRGB to tint the image. This is a requirement for using sprites for
-     * faction-specific objects, especially ships and stations.
-     *
-     * The following doesn't work — it wipes the rest of the canvas rendered before this — and it's unclear why.
-     *
-     * ```
-     * ctx.globalCompositeOperation = "source-in";
-     *
-     * // Draw the shape.
-     * ctx.fillRect(0, 0, imageSize, imageSize);
-     * ```
-     *
-     * Doing the rendering in a separate off-screen canvas didn't help.
-     *
-     * The alternatives are to rewrite the color of every pixel, which is ridiculously expensive, or to tint the
-     * source files in a sprite sheet, which is a lot of work required for every game sprite.
-     */
+    // TODO: Blend a rect filled with fillColorRGB to tint the image. This is a requirement for using sprites for
+    // faction-specific objects, especially ships and stations.
+    //
+    // The following doesn't work — it wipes the rest of the canvas rendered before this — and it's unclear why.
+    //
+    // ```
+    // ctx.globalCompositeOperation = "source-in";
+    //
+    // // Draw the shape.
+    // ctx.fillRect(0, 0, imageSize, imageSize);
+    // ```
+    //
+    // Doing the rendering in a separate off-screen canvas didn't help.
+    //
+    // The alternatives are to rewrite the color of every pixel, which is ridiculously expensive, or to tint the
+    // source files in a sprite sheet, which is a lot of work required for every game sprite.
 
     // Reset global alpha.
     ctx.globalAlpha = 1.0;
@@ -1323,10 +1328,13 @@ class Canvas {
     // Draw the callsign above the object.
     ctx.fillStyle = Canvas.getFactionColor(entry.faction, lowColor, highColor);
     ctx.textAlign = "center";
-    ctx.font = `${fontSize}px 'Bebas Neue Book', Impact, Arial, sans-serif`;
+    ctx.font = `${fontSize}px 'Big Shoulders', 'Bebas Neue Book', Impact, Arial, sans-serif`;
+
+    // Call out PlayerSpaceships in callsigns
     if (entry.type === "PlayerSpaceship") {
       callsignText = `${callsignText} (Player)`;
     }
+
     ctx.fillText(callsignText, positionX, positionY - textDriftAmount);
 
     // Reset text alignment.
@@ -1400,18 +1408,17 @@ class Canvas {
       factionColor = overrideFillColor;
     }
 
-    /*
-     * Draw shield arcs if the object has them. #4
-     * For each segment in entry.shields.
-     *  Divide a circle into equal sized arcs.
-     *  Draw each arc at an alpha value relative to its current percentile strength.
-     *  Max is in the entry.config.shields array.
-     *
-     * Draw hull strength bar. #4
-     * For entry.hull.
-     *  Draw the width at a value relative to its current percentile strength.
-     *  Max is in entry.config.hull.
-     */
+    // Draw shield arcs if the object has them. #4
+    // For each segment in entry.shields.
+    //  Divide a circle into equal sized arcs.
+    //  Draw each arc at an alpha value relative to its current percentile strength.
+    //  Max is in the entry.config.shields array.
+    //
+    // Draw hull strength bar. #4
+    // For entry.hull.
+    //  Draw the width at a value relative to its current percentile strength.
+    //  Max is in entry.config.hull.
+    //
 
     // Draw beam arcs if the object has them and we're not drawing on the hit canvas.
     if ("config" in entry && "beams" in entry.config && !drawingOnHitCanvas) {

@@ -1,26 +1,26 @@
-Big Shoulders Display Variable Font
-===================================
+Big Shoulders Text Variable Font
+================================
 
-This download contains Big Shoulders Display as both a variable font and static fonts.
+This download contains Big Shoulders Text as both a variable font and static fonts.
 
-Big Shoulders Display is a variable font with this axis:
+Big Shoulders Text is a variable font with this axis:
   wght
 
 This means all the styles are contained in a single file:
-  BigShouldersDisplay-VariableFont_wght.ttf
+  BigShouldersText-VariableFont_wght.ttf
 
 If your app fully supports variable fonts, you can now pick intermediate styles
 that aren’t available as static fonts. Not all apps support variable fonts, and
-in those cases you can use the static font files for Big Shoulders Display:
-  static/BigShouldersDisplay-Thin.ttf
-  static/BigShouldersDisplay-ExtraLight.ttf
-  static/BigShouldersDisplay-Light.ttf
-  static/BigShouldersDisplay-Regular.ttf
-  static/BigShouldersDisplay-Medium.ttf
-  static/BigShouldersDisplay-SemiBold.ttf
-  static/BigShouldersDisplay-Bold.ttf
-  static/BigShouldersDisplay-ExtraBold.ttf
-  static/BigShouldersDisplay-Black.ttf
+in those cases you can use the static font files for Big Shoulders Text:
+  static/BigShouldersText-Thin.ttf
+  static/BigShouldersText-ExtraLight.ttf
+  static/BigShouldersText-Light.ttf
+  static/BigShouldersText-Regular.ttf
+  static/BigShouldersText-Medium.ttf
+  static/BigShouldersText-SemiBold.ttf
+  static/BigShouldersText-Bold.ttf
+  static/BigShouldersText-ExtraBold.ttf
+  static/BigShouldersText-Black.ttf
 
 Get started
 -----------
