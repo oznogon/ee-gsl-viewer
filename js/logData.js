@@ -33,13 +33,11 @@ class LogData {
     for (let entryIndex = 0; entryIndex < this.entries.length; entryIndex += 1) {
       const entry = this.entries[entryIndex];
 
-      /*
-       * Work from beginning to end, and stop if the entry timestamp is later than the given time.
-       * We collect all entries up to the given time, because static objects are only guaranteed to
-       * be listed when they're added and might be modified or deleted between the scenario start
-       * and the given time, so we need to compare any added or deleted objects at each step to the
-       * cumulative historical state at the given point in time.
-       */
+      // Work from beginning to end, and stop if the entry timestamp is later than the given time.
+      // We collect all entries up to the given time, because static objects are only guaranteed to
+      // be listed when they're added and might be modified or deleted between the scenario start
+      // and the given time, so we need to compare any added or deleted objects at each step to the
+      // cumulative historical state at the given point in time.
       if (entry.time > time) {
         break;
       }

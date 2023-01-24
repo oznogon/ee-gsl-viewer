@@ -1,16 +1,10 @@
-/*
- * --------------------------------------------------------------------------------------------------------------------
- * Global values.
- * --------------------------------------------------------------------------------------------------------------------
- */
+// Global values
+// =============
 
 let log;
 
-/*
- * --------------------------------------------------------------------------------------------------------------------
- * Functions.
- * --------------------------------------------------------------------------------------------------------------------
- */
+// Global functions
+// ================
 
 // Load log data, hide the dropzone div, and setup the time selector.
 function loadLog (data, canvas) {
@@ -23,14 +17,11 @@ function loadLog (data, canvas) {
   }
 }
 
+// Main onReady function.
 $().ready(function () {
-  // Main onReady function.
 
-  /*
-   * -------------------------------------------------------------------------------------------------------------------
-   * Data
-   * -------------------------------------------------------------------------------------------------------------------
-   */
+  // Data
+  // ====
 
   // Initialize the interactive file selector.
   const [filepicker] = $("#filepicker"),
@@ -55,11 +46,8 @@ $().ready(function () {
     // Do not initiate playback on ready by default.
     isAutoplaying = false;
 
-  /*
-   * -------------------------------------------------------------------------------------------------------------------
-   * Loading screen events
-   * -------------------------------------------------------------------------------------------------------------------
-   */
+  // Loading screen events
+  // =====================
 
   // Listen from drag and drop events to load log files.
   document.addEventListener("dragover", function (event) {
@@ -102,7 +90,7 @@ $().ready(function () {
     }
   });
 
-  // Zoom bar.
+  // Implement the zoom controls.
   $("#zoom_selector").on("input change", function (/* event */) {
     canvas._zoomScale = $("#zoom_selector").val() / 1000;
     canvas.update();
@@ -136,11 +124,8 @@ $().ready(function () {
       $("#zoom_out").removeClass("ee-button-active");
     });
 
-  /*
-   * -------------------------------------------------------------------------------------------------------------------
-   * Functions
-   * -------------------------------------------------------------------------------------------------------------------
-   */
+  // Main-scope functions
+  // ====================
 
   function advanceTimeline (direction = 1) {
     let timeValue = parseInt($("#time_selector").val(), 10);
@@ -174,6 +159,7 @@ $().ready(function () {
     return isAutoplaying;
   }
 
+  // Update the canvas state for timeline changes.
   function timeSelectorUpdated () {
     // Update the canvas.
     canvas.update();
@@ -186,6 +172,7 @@ $().ready(function () {
     }
   }
 
+  // Reset the autoplay loop.
   function resetAutoplay (autoplayLoop) {
     // Clear and reset the autoplay interval to change it.
     clearInterval(autoplayLoop);
@@ -200,6 +187,7 @@ $().ready(function () {
     }, playbackUpdateInterval);
   }
 
+  // Toggle the autoplay loop state.
   function toggleAutoplay () {
     if (log !== null) {
       // Toggle autoplaying state.
@@ -216,6 +204,7 @@ $().ready(function () {
     }
   }
 
+  // Iterate through playback speed options.
   function cycleAutoplaySpeed () {
     for (let index = playbackUpdateOptions.length - 1; index >= 0; index -= 1) {
       // Loop through options to get the index of our current setting.
@@ -243,9 +232,10 @@ $().ready(function () {
     $("#autoplay_speed").text(`${Math.floor(1000 / playbackUpdateInterval)}x`);
   }
 
+  // Toggle callsign displays.
   function toggleCallsigns () {
-    // If a log's loaded, toggle callsigns and update the canvas.
     if (log !== null) {
+      // Toggle callsigns and update the canvas.
       canvas.showCallsigns = !canvas.showCallsigns;
       canvas.update();
 
@@ -258,9 +248,10 @@ $().ready(function () {
     }
   }
 
+  // Toggle locking the view on a selected object.
   function toggleViewLock () {
-    // If the view is locked on a valid selected object, toggle the button.
     if (log !== null) {
+      // If the view is locked on a valid selected object, toggle the button.
       canvas.isViewLocked = !canvas.isViewLocked;
 
       if (canvas.isViewLocked === true) {
@@ -276,16 +267,13 @@ $().ready(function () {
     }
   }
 
-  /*
-   * -------------------------------------------------------------------------------------------------------------------
-   * Interactive events
-   * -------------------------------------------------------------------------------------------------------------------
-   */
+  // Interactive events
+  // ==================
 
   // Reinitialize the playback interval.
   loopAutoplay = resetAutoplay(loopAutoplay);
 
-  // Update the canvas when the time selector is modified.
+  // Update the canvas for features' UI control interactions.
   $("#time_selector").on("input change", function (/* event */) {
     timeSelectorUpdated();
   });
@@ -308,13 +296,18 @@ $().ready(function () {
     toggleCallsigns();
   });
 
-  // Handle keyboard shortcuts.
-  // Zoom in and out. Double the rate if holding shift.
+  // Keyboard shortcuts
+  // ==================
+
+  // Zoom controls
+  // Double the zoom rate if holding shift.
   Mousetrap.bind("=", () => canvas.zoomCamera(1));
   Mousetrap.bind("+", () => canvas.zoomCamera(2));
   Mousetrap.bind("-", () => canvas.zoomCamera(-1));
   Mousetrap.bind("_", () => canvas.zoomCamera(-2));
-  // Pan the camera, with the amount scaled to the zoom level.
+
+  // Camera pan controls
+  // Scale the panning movement to the zoom level.
   Mousetrap.bind(["w", "a", "s", "d",
     "shift+w", "shift+a", "shift+s", "shift+d"], function (event, combo) {
     // Set the camera position relative to its current world position.
@@ -359,8 +352,9 @@ $().ready(function () {
       canvas.update();
     }
   });
-  // Playback controls.
-  Mousetrap.bind("space", () => toggleAutoplay());
+
+  // Playback controls
+  Mousetrap.bind("k", () => toggleAutoplay());
   Mousetrap.bind("]", () => cycleAutoplaySpeed());
   Mousetrap.bind("c", () => toggleCallsigns());
   Mousetrap.bind("l", () => toggleViewLock());
@@ -368,6 +362,9 @@ $().ready(function () {
   Mousetrap.bind("z", () => advanceTimeline(-1));
   Mousetrap.bind("shift+x", () => advanceTimeline(10));
   Mousetrap.bind("shift+z", () => advanceTimeline(-10));
+
+  // Debug toggle (no corresponding UI element)
+  // Draw only debug rectangles and log selected object JSON to the console.
   Mousetrap.bind("shift+d", () => {
     canvas._debugDrawing = !canvas._debugDrawing;
     console.debug(canvas._selectedObject);
