@@ -728,6 +728,10 @@ class Canvas {
           imageRNG = alea(`${entry.id}`);
 
         switch (entry.type) {
+        case "Zone": {
+          console.log("Zone TODO - pull shape, color from data, draw label text");
+        }
+        break;
         case "Nebula": {
           Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, halfTransparent, size5U / 2, this.nebulaImages[Math.floor(imageRNG() * 3)], rotation, true);
         }
@@ -738,7 +742,6 @@ class Canvas {
         break;
         case "WormHole": {
           Canvas.drawImage(ctxBg, positionX, positionY, this._zoomScale, opaque, size5U / 2, this.wormHoleImages[Math.floor(imageRNG() * 3)], rotation, true);
-          // Canvas.drawCircle(ctxBg, positionX, positionY, this._zoomScale, "#800080", mostlyTransparent, size5U);
         }
         break;
         case "Mine": {

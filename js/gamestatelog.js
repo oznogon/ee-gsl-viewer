@@ -50,6 +50,24 @@ $().ready(function () {
   // =====================
 
   // Listen from drag and drop events to load log files.
+  let counter = 0;
+
+  document.addEventListener("dragenter", function (event) {
+    event.stopPropagation();
+    event.preventDefault();
+    counter++;
+    document.getElementById("droptarget").classList.add('ee-box-highlight');
+  });
+
+  document.addEventListener("dragleave", function (event) {
+    event.stopPropagation();
+    event.preventDefault();
+    counter--;
+    if (counter === 0) {
+        document.getElementById("droptarget").classList.remove('ee-box-highlight');
+    }
+  });
+
   document.addEventListener("dragover", function (event) {
     event.stopPropagation();
     event.preventDefault();
