@@ -93,6 +93,8 @@ Incorporates:
 
 - Johannes Baagøe's [Alea PRNG](https://web.archive.org/web/20120619002808/http://baagoe.org/en/wiki/Better_random_numbers_for_javascript) asported and packaged in [davidbau/seedrandom](https://github.com/davidbau/seedrandom/blob/released/lib/alea.js)
 - [ccampbell/mousetrap](https://github.com/ccampbell/mousetrap)
+- [fstirlitz/luaparse](https://github.com/fstirlitz/luaparse)
 - [jquery](https://jquery.org)
 - The font Big Shoulders, [xotypeco/big_shoulders](https://github.com/xotypeco/big_shoulders)
 - The EmptyEpsilon icons font from [daid/EmptyEpsilon](https://github.com/daid/EmptyEpsilon/blob/master/icons-font.ttf)
+- `factionInfo.lua` from [daid/EmptyEpsilon](https://github.com/daid/EmptyEpsilon)
