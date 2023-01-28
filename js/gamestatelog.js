@@ -23,6 +23,9 @@ $().ready(function () {
   // Data
   // ====
 
+  // Load and parse factionsInfo.lua
+  // let factions = parseFactions();
+
   // Initialize the interactive file selector.
   const [filepicker] = $("#filepicker"),
     // Define options for playbackUpdateInterval.

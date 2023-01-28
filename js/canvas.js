@@ -1014,7 +1014,15 @@ class Canvas {
         eachGridlineHoriz += 1) {
         for (let eachGridlineVert = 0; eachGridlineVert < gridlineVertCanvasList.length;
           eachGridlineVert += 1) {
-          ctx.fillText(Canvas.getSectorDesignation(gridlineVertWorldList[eachGridlineVert], gridlineHorizWorldList[eachGridlineHoriz], this.sectorSize), gridlineVertCanvasList[eachGridlineVert] + 16, gridlineHorizCanvasList[eachGridlineHoriz] + 32);
+          ctx.fillText(
+            Canvas.getSectorDesignation(
+              gridlineVertWorldList[eachGridlineVert],
+              gridlineHorizWorldList[eachGridlineHoriz],
+              this.sectorSize
+            ),
+            gridlineVertCanvasList[eachGridlineVert] + 16,
+            gridlineHorizCanvasList[eachGridlineHoriz] + 32
+          );
         }
       }
     }
@@ -1421,7 +1429,6 @@ class Canvas {
     // For entry.hull.
     //  Draw the width at a value relative to its current percentile strength.
     //  Max is in entry.config.hull.
-    //
 
     // Draw beam arcs if the object has them and we're not drawing on the hit canvas.
     if ("config" in entry && "beams" in entry.config && !drawingOnHitCanvas) {
